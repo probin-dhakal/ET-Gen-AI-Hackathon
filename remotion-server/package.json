@@ -1,0 +1,23 @@
+{
+  "name": "remotion-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+   "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@remotion/cli": "^4.0.436",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "remotion": "^4.0.436"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
