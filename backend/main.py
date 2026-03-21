@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
-from pydantic import BaseModel
 from src.news_translation import VernacularNewsTranslator
 
 app = FastAPI()
