@@ -37,7 +37,7 @@ class VernacularNewsTranslator:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
         
         os.environ["GOOGLE_API_KEY"] = api_key
-        model = init_chat_model("google_genai:gemini-2.5-flash-lite")
+        model = init_chat_model("google_genai:gemini-2.5-flash")
 
         self.agent = create_agent(
             model=model,
