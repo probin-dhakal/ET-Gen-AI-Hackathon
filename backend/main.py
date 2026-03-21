@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
-
 from backend.src.news_translation import VernacularNewsTranslator
 
 app = FastAPI()
@@ -44,5 +43,5 @@ def translate_news(data: dict):
     )
 
     print(f"Translated article: {translated_article}")
-    
+
     return translated_article

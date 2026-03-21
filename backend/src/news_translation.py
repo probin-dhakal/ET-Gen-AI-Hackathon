@@ -11,7 +11,7 @@ from langchain.chat_models import init_chat_model
 load_dotenv()
 
 class TranslatedArticle(BaseModel):
-    """Structured output for translated business news."""
+    """Structured output for translated news articles (any genre)."""
     original_language: str = Field(description="Original language (English)")
     target_language: str = Field(description="Target language for translation")
     original_heading: str = Field(description="Original English heading")
@@ -24,7 +24,8 @@ class TranslatedArticle(BaseModel):
 
 class VernacularNewsTranslator:
     """
-    AI-powered vernacular business news translator using LangChain agents.
+    AI-powered vernacular news translator using LangChain agents.
+    Works with any type of news (business, politics, sports, tech, entertainment, etc.).
     Supports Hindi, Tamil, Telugu, Bengali, and Assamese.
     Uses Gemini 2.5 Flash with structured response format.
     """
@@ -51,7 +52,8 @@ class VernacularNewsTranslator:
         language: str
     ) -> TranslatedArticle:
         """
-        Translate a business news article into specified Indian language with cultural adaptation.
+        Translate a news article into specified Indian language with cultural adaptation.
+        Works with any genre: business, politics, sports, technology, entertainment, etc.
         
         Args:
             article_heading: The original English article heading
@@ -70,7 +72,7 @@ class VernacularNewsTranslator:
         # Construct translation request
         translation_request = f"""{system_prompt}
 
-Please translate this business news article into {language_name} with cultural adaptation:
+Please translate this news article into {language_name} with cultural adaptation:
 
 HEADING: {article_heading}
 
@@ -78,11 +80,11 @@ BODY:
 {article_body}
 
 Remember to:
-1. NOT provide literal word-for-word translation - adapt concepts for local context
-2. Use region-specific business terminology
-3. Add local economic context and references
-4. Include local business parallels and comparable companies
-5. Explain foreign concepts through {language_name} lens
+1. NOT provide literal word-for-word translation - adapt concepts for local cultural context
+2. Use region-specific terminology appropriate to the news genre
+3. Add local context and references relevant to the region
+4. Include local parallels and comparable references where applicable
+5. Explain foreign concepts through {language_name} cultural lens
 6. Maintain original facts and figures exactly as stated"""
         
         # Invoke agent with structured response
@@ -147,7 +149,7 @@ if __name__ == "__main__":
     result = translator.translate_article(
         article_heading=sample_heading,
         article_body=sample_body,
-        language="assamese"
+        language="bengali"
     )
     
     # Format output
