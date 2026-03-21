@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
+from pydantic import BaseModel
 from src.news_translation import VernacularNewsTranslator
 
 app = FastAPI()
@@ -13,6 +14,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request model for translation endpoint
+class TranslationRequest(BaseModel):
+    heading: str
+    body: str
 
 @app.get("/")
 def home():
@@ -29,19 +35,26 @@ def generate_video(data: dict):
 
 
 @app.post("/translate-news/{language}")
-def translate_news(language: str, data: dict):
-    translator = VernacularNewsTranslator()
+def translate_news(language: str, request_data: TranslationRequest):
+    try:
+        translator = VernacularNewsTranslator()
 
-    article_heading = data.get("heading", "")
-    article_body = data.get("body", "")
-    language = language.lower()
+        article_heading = request_data.heading
+        article_body = request_data.body
+        language = language.lower()
 
-    translated_article = translator.translate_article(
-        article_heading=article_heading,
-        article_body=article_body,
-        language=language
-    )
+        translated_article = translator.translate_article(
+            article_heading=article_heading,
+            article_body=article_body,
+            language=language
+        )
 
-    print(f"Translated article: {translated_article}")
+        print(f"Translated article: {translated_article}")
 
-    return translated_article
+        return translated_article
+    except Exception as e:
+        print(f"Error in translate_news endpoint: {str(e)}")
+        return {
+            "error": str(e),
+            "message": "Translation failed. Ensure GEMINI_API_KEY is set in environment variables."
+        }

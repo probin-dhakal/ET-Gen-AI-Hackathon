@@ -17,6 +17,8 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
   const shouldShowDescription = Boolean(cleanDescription);
   const shouldShowContent = Boolean(cleanContent) && cleanContent !== cleanDescription;
+  const isVernacularSelected = activeLanguage !== 'English';
+  const hasTranslatedContent = Boolean(translatedArticle && !isLoading && !error);
 
   // Fetch translation when language changes
   useEffect(() => {
@@ -46,26 +48,47 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
         const articleBody = cleanContent || cleanDescription || '';
         
+        if (!articleBody || articleBody.length < 10) {
+          throw new Error('Article content is too short to translate. Please select a different article.');
+        }
+
         const response = await fetch(`http://localhost:8000/translate-news/${languageCode}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            heading: article.title || '',
+            heading: article.title || 'News Article',
             body: articleBody,
           }),
+          timeout: 30000
         });
 
         if (!response.ok) {
-          throw new Error(`Translation failed: ${response.statusText}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
+        
+        // Check if response is an error object
+        if (data.error) {
+          throw new Error(data.message || data.error);
+        }
+        
         setTranslatedArticle(data);
       } catch (err) {
         console.error('Translation error:', err);
-        setError(err.message || 'Failed to translate article');
+        let errorMessage = err.message;
+        
+        // Handle common errors
+        if (errorMessage.includes('Failed to fetch')) {
+          errorMessage = 'Backend server is not running. Start it with: uvicorn main:app --reload';
+        } else if (errorMessage.includes('GEMINI_API_KEY')) {
+          errorMessage = 'API key not configured. Set GEMINI_API_KEY environment variable.';
+        }
+        
+        setError(errorMessage);
         setTranslatedArticle(null);
       } finally {
         setIsLoading(false);
@@ -92,7 +115,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
             {article.source?.name || 'ET Bureau'} • Published Today
           </span>
           <h1 className="font-serif text-4xl font-bold leading-tight mb-4">
-            {article.title}
+            {hasTranslatedContent ? translatedArticle.translated_heading : article.title}
           </h1>
           
           <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-md mb-6 text-indigo-900 text-sm">
@@ -107,13 +130,48 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
           />
 
           <div className="font-serif text-lg leading-relaxed space-y-4 text-gray-800">
-            {shouldShowDescription && <p className="font-bold text-xl">{cleanDescription}</p>}
-            {shouldShowContent && <p>{cleanContent}</p>}
-            {!shouldShowDescription && !shouldShowContent && (
-              <p className="text-gray-600">
-                Full article text is not available from this source preview.
-              </p>
+            {isVernacularSelected && isLoading && (
+              <div className="flex items-center space-x-2 text-[#cc0000]">
+                <Loader size={18} className="animate-spin" />
+                <p className="text-base font-semibold">Translating article to {activeLanguage}...</p>
+              </div>
             )}
+
+            {isVernacularSelected && error && (
+              <div className="flex items-start space-x-2 text-red-700 bg-red-50 border border-red-200 rounded p-3">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">Translation Error</p>
+                  <p className="text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {hasTranslatedContent ? (
+              <>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#cc0000] mb-2">Translated Preview</p>
+                  <p>{translatedArticle.translated_body}</p>
+                </div>
+                {translatedArticle.local_context && (
+                  <div className="bg-red-50 p-4 border border-[#cc0000] rounded">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#cc0000] mb-2">Local Context</p>
+                    <p className="text-base leading-relaxed text-gray-800">{translatedArticle.local_context}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {shouldShowDescription && <p className="font-bold text-xl">{cleanDescription}</p>}
+                {shouldShowContent && <p>{cleanContent}</p>}
+                {!shouldShowDescription && !shouldShowContent && (
+                  <p className="text-gray-600">
+                    Full article text is not available from this source preview.
+                  </p>
+                )}
+              </>
+            )}
+
             {article.url && (
               <a
                 href={article.url}
@@ -209,50 +267,6 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
               <option value="Assamese">Assamese (অসমীয়া) - Cultural Context</option>
             </select>
             <p className="text-[10px] text-gray-500 mt-2">Translates concepts, not just words.</p>
-
-            {activeLanguage !== 'English' && (
-              <div className="mt-4 pt-4 border-t border-red-200">
-                {isLoading && (
-                  <div className="flex items-center space-x-2 text-red-700">
-                    <Loader size={14} className="animate-spin" />
-                    <span className="text-xs font-semibold">Translating to {activeLanguage}...</span>
-                  </div>
-                )}
-
-                {error && (
-                  <div className="flex items-start space-x-2 text-red-700">
-                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-xs font-semibold">Translation Error</p>
-                      <p className="text-[10px]">{error}</p>
-                    </div>
-                  </div>
-                )}
-
-                {translatedArticle && !isLoading && (
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-red-900 font-semibold mb-1">Translated Heading:</p>
-                      <p className="text-sm font-bold leading-tight text-gray-900">
-                        {translatedArticle.translated_heading}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-red-900 font-semibold mb-1">Translated Preview:</p>
-                      <p className="text-xs text-gray-700 line-clamp-3">
-                        {translatedArticle.translated_body}
-                      </p>
-                    </div>
-                    {translatedArticle.local_context && (
-                      <div className="bg-white p-2 rounded border-l-2 border-[#cc0000] text-[10px]">
-                        <p className="font-semibold text-[#cc0000] mb-1">Local Context:</p>
-                        <p className="text-gray-600">{translatedArticle.local_context}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
         </div>
