@@ -44,7 +44,8 @@ const App = () => {
         <div className="col-span-1 md:col-span-3">
           <RightPanel 
             activeLanguage={activeLanguage} 
-            setActiveLanguage={setActiveLanguage} 
+            setActiveLanguage={setActiveLanguage}
+            selectedArticle={selectedArticle}
           />
         </div>
         

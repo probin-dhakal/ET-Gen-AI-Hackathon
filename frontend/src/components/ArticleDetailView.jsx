@@ -1,7 +1,11 @@
-import React from 'react';
-import { ArrowLeft, MessageSquare, PlayCircle, Globe, Activity, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, MessageSquare, PlayCircle, Globe, Activity, FileText, Loader, AlertCircle } from 'lucide-react';
 
 const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage }) => {
+  const [translatedArticle, setTranslatedArticle] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const description = article.description || '';
   const content = article.content || '';
 
@@ -13,6 +17,63 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
   const shouldShowDescription = Boolean(cleanDescription);
   const shouldShowContent = Boolean(cleanContent) && cleanContent !== cleanDescription;
+
+  // Fetch translation when language changes
+  useEffect(() => {
+    if (activeLanguage === 'English') {
+      setTranslatedArticle(null);
+      setError(null);
+      return;
+    }
+
+    const fetchTranslation = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const languageMap = {
+          'Hindi': 'hindi',
+          'Tamil': 'tamil',
+          'Telugu': 'telugu',
+          'Bengali': 'bengali',
+          'Assamese': 'assamese'
+        };
+
+        const languageCode = languageMap[activeLanguage];
+        if (!languageCode) {
+          throw new Error('Unsupported language');
+        }
+
+        const articleBody = cleanContent || cleanDescription || '';
+        
+        const response = await fetch(`http://localhost:8000/translate-news/${languageCode}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            heading: article.title || '',
+            body: articleBody,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Translation failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setTranslatedArticle(data);
+      } catch (err) {
+        console.error('Translation error:', err);
+        setError(err.message || 'Failed to translate article');
+        setTranslatedArticle(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTranslation();
+  }, [activeLanguage, article, cleanContent, cleanDescription]);
 
   return (
     <main className="max-w-7xl mx-auto p-4 mt-4">
@@ -143,8 +204,55 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
               <option value="English">Read in English</option>
               <option value="Hindi">Hindi (हिंदी) - Cultural Context</option>
               <option value="Tamil">Tamil (தமிழ்) - Cultural Context</option>
+              <option value="Telugu">Telugu (తెలుగు) - Cultural Context</option>
+              <option value="Bengali">Bengali (বাংলা) - Cultural Context</option>
+              <option value="Assamese">Assamese (অসমীয়া) - Cultural Context</option>
             </select>
             <p className="text-[10px] text-gray-500 mt-2">Translates concepts, not just words.</p>
+
+            {activeLanguage !== 'English' && (
+              <div className="mt-4 pt-4 border-t border-red-200">
+                {isLoading && (
+                  <div className="flex items-center space-x-2 text-red-700">
+                    <Loader size={14} className="animate-spin" />
+                    <span className="text-xs font-semibold">Translating to {activeLanguage}...</span>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="flex items-start space-x-2 text-red-700">
+                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold">Translation Error</p>
+                      <p className="text-[10px]">{error}</p>
+                    </div>
+                  </div>
+                )}
+
+                {translatedArticle && !isLoading && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-red-900 font-semibold mb-1">Translated Heading:</p>
+                      <p className="text-sm font-bold leading-tight text-gray-900">
+                        {translatedArticle.translated_heading}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-red-900 font-semibold mb-1">Translated Preview:</p>
+                      <p className="text-xs text-gray-700 line-clamp-3">
+                        {translatedArticle.translated_body}
+                      </p>
+                    </div>
+                    {translatedArticle.local_context && (
+                      <div className="bg-white p-2 rounded border-l-2 border-[#cc0000] text-[10px]">
+                        <p className="font-semibold text-[#cc0000] mb-1">Local Context:</p>
+                        <p className="text-gray-600">{translatedArticle.local_context}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>

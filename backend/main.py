@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import requests
-from backend.src.news_translation import VernacularNewsTranslator
+from src.news_translation import VernacularNewsTranslator
 
 app = FastAPI()
 
@@ -29,12 +29,12 @@ def generate_video(data: dict):
 
 
 @app.post("/translate-news/{language}")
-def translate_news(data: dict):
+def translate_news(language: str, data: dict):
     translator = VernacularNewsTranslator()
 
     article_heading = data.get("heading", "")
     article_body = data.get("body", "")
-    language = data.get("language", "hindi").lower()
+    language = language.lower()
 
     translated_article = translator.translate_article(
         article_heading=article_heading,
