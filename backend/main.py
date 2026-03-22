@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import requests
+from pydantic import BaseModel
 from src.news_translation import VernacularNewsTranslator
-
+from src.news_summarization import NewsVideoGenerator
+from fastapi.staticfiles import StaticFiles
 app = FastAPI()
 
-# CORS (important for React later)
+# ✅ CORS (important for React)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,24 +15,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request model for translation endpoint
+# ==============================
+# 📦 Request Models
+# ==============================
+
 class TranslationRequest(BaseModel):
     heading: str
     body: str
+
+
+class VideoRequest(BaseModel):
+    article: str
+    title: str | None = "Generated Video"
+
+
+
+
+# ✅ Serve audio folder
+app.mount("/audio", StaticFiles(directory="audio"), name="audio")
+# ==============================
+# 🏠 Root Route
+# ==============================
 
 @app.get("/")
 def home():
     return {"message": "FastAPI backend running"}
 
-@app.post("/generate-video")
-def generate_video(data: dict):
-    # Example: send to Remotion server
-    remotion_url = "http://localhost:3001/render"
 
-    response = requests.post(remotion_url, json=data)
-
-    return response.json()
-
+# ==============================
+# 🌐 Translation API
+# ==============================
 
 @app.post("/translate-news/{language}")
 def translate_news(language: str, request_data: TranslationRequest):
@@ -51,9 +64,36 @@ def translate_news(language: str, request_data: TranslationRequest):
         print(f"Translated article: {translated_article}")
 
         return translated_article
+
     except Exception as e:
         print(f"Error in translate_news endpoint: {str(e)}")
         return {
             "error": str(e),
-            "message": "Translation failed. Ensure GEMINI_API_KEY is set in environment variables."
+            "message": "Translation failed. Ensure GEMINI_API_KEY is set."
         }
+
+
+# ==============================
+# 🎬 Video Generation API
+# ==============================
+
+@app.post("/generate-video")
+def generate_video(request_data: VideoRequest):
+    try:
+        generator = NewsVideoGenerator()
+        result = generator.generate_video(
+            request_data.article,
+            request_data.title
+        )
+
+        return {"status": "success", "data": result}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
+    
+
+
+
+    
