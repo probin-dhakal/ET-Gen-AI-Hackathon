@@ -1,56 +1,45 @@
 import express from "express";
 import cors from "cors";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import path from "path";
 
 const app = express();
-
-app.use(cors({ origin: "*" }));
+app.use(cors());
 app.use(express.json());
 
-// Debug logger
-app.use((req, res, next) => {
-  console.log("Incoming:", req.method, req.url);
-  next();
-});
-
-const PORT = 3001;
-
-// Test route
-app.get("/", (req, res) => {
-  res.send("Server running");
-});
-
-app.get("/render", (req, res) => {
-  res.send("Use POST for rendering");
-});
-
-// Serve videos
 app.use("/videos", express.static(path.join(process.cwd(), "out")));
 
 app.post("/render", (req, res) => {
-  console.log("BODY:", req.body);
+  const file = `out/video-${Date.now()}.mp4`;
 
-  const outputFile = `out/video-${Date.now()}.mp4`;
+  execFile(
+  "npx",
+  [
+    "remotion",
+    "render",
+    "src/index.js",
+    "MyVideo",
+    file,
+    "--props",
+    JSON.stringify(req.body),
+    "--duration",
+    `${req.body.durationInFrames}`
+  ],
+    (err, stdout, stderr) => {
+      console.log(stdout);
+      console.log(stderr);
 
-  const props = JSON.stringify(req.body).replace(/"/g, '\\"');
+      if (err) {
+        return res.status(500).json({ error: stderr });
+      }
 
-  const command = `
-    npx remotion render src/index.js MyVideo ${outputFile} --props="${props}"
-  `;
-
-  exec(command, (error) => {
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Render failed" });
+      res.json({
+        videoUrl: `http://localhost:3001/videos/${file.split("/")[1]}`
+      });
     }
-
-    res.json({
-      video_url: `http://localhost:${PORT}/videos/${outputFile.split("/")[1]}`
-    });
-  });
+  );
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(3001, () => {
+  console.log("🚀 Remotion server running");
 });
