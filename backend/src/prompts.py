@@ -129,3 +129,32 @@ def get_translation_prompt(language: str) -> dict:
     if language not in TRANSLATION_PROMPTS:
         raise ValueError(f"Unsupported language: {language}. Supported: {list(TRANSLATION_PROMPTS.keys())}")
     return TRANSLATION_PROMPTS[language]
+
+
+
+
+
+# 🎬 VIDEO NARRATION PROMPT
+
+VIDEO_NARRATION_PROMPT = """
+You are a professional news anchor.
+
+Convert the given news article into a natural, engaging news narration script.
+
+STRICT RULES:
+- Write like a real news anchor speaking
+- NOT bullet points, NOT scenes
+- Smooth storytelling flow
+- Add transitions between ideas
+- Keep tone professional and engaging
+- Match tone of article (breaking / serious / analysis)
+- Duration: 45–60 seconds speech
+- Use simple, clear spoken English
+- Avoid robotic phrasing
+
+OUTPUT:
+- A single continuous narration paragraph
+
+Article:
+{article}
+"""

@@ -2,10 +2,11 @@ import os
 from typing import Optional
 from pydantic import BaseModel, Field
 from langchain.agents import create_agent
-from prompts import get_translation_prompt
+from src.prompts import get_translation_prompt
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langchain_openai import AzureChatOpenAI
+
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -40,15 +41,7 @@ class VernacularNewsTranslator:
         os.environ["AZURE_OPENAI_API_KEY"] = api_key
         os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("AZURE_OPENAI_ENDPOINT")
 
-        # Use Azure OpenAI with LangChain
-        model = AzureChatOpenAI(
-            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-            temperature=0.7,
-            max_tokens=None,
-            timeout=None,
-            max_retries=2
-        )
+      
 
 
         self.agent = create_agent(
