@@ -2,10 +2,10 @@ import os
 from typing import Optional
 from pydantic import BaseModel, Field
 from langchain.agents import create_agent
-from .prompts import get_translation_prompt
+from prompts import get_translation_prompt
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-
+from langchain_openai import AzureChatOpenAI
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,12 +32,24 @@ class VernacularNewsTranslator:
     
     def __init__(self, api_key: Optional[str] = None):
         """Initialize the translator with create_agent using Gemini 2.5 Flash."""
-        api_key = api_key or os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY not found in environment variables")
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        if "AZURE_OPENAI_API_KEY" not in os.environ:
+            print("⚠️ Warning: AZURE_OPENAI_API_KEY not found in environment variables. Please set it in your .env file.")
+            os.environ["AZURE_OPENAI_API_KEY"] = api_key
         
-        os.environ["GOOGLE_API_KEY"] = api_key
-        model = init_chat_model("google_genai:gemini-2.5-flash")
+        os.environ["AZURE_OPENAI_API_KEY"] = api_key
+        os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+        # Use Azure OpenAI with LangChain
+        model = AzureChatOpenAI(
+            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            temperature=0.7,
+            max_tokens=None,
+            timeout=None,
+            max_retries=2
+        )
+
 
         self.agent = create_agent(
             model=model,

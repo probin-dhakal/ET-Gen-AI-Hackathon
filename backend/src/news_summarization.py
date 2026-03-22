@@ -7,7 +7,9 @@ from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
 from gtts import gTTS
 from pydub import AudioSegment
+from langchain_openai import AzureChatOpenAI
 import requests
+import os
 
 load_dotenv()
 
@@ -28,10 +30,26 @@ class VideoScript(BaseModel):
 
 class NewsVideoGenerator:
     def __init__(self):
-        os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        if "AZURE_OPENAI_API_KEY" not in os.environ:
+            print("⚠️ Warning: AZURE_OPENAI_API_KEY not found in environment variables. Please set it in your .env file.")
+            os.environ["AZURE_OPENAI_API_KEY"] = api_key
+        
+        os.environ["AZURE_OPENAI_API_KEY"] = api_key
+        os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+        # Use Azure OpenAI with LangChain
+        model = AzureChatOpenAI(
+            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            temperature=0.7,
+            max_tokens=None,
+            timeout=None,
+            max_retries=2
+        )
 
         self.agent = create_agent(
-            model=init_chat_model("google_genai:gemini-2.5-flash"),
+            model=model,
             response_format=VideoScript
         )
 
