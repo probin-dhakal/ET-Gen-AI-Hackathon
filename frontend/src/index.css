@@ -1,1 +1,6 @@
 @import "tailwindcss";
+.vertical-timeline-element-date {
+  margin-left: -15px !important;
+  margin-top: -18px !important;
+  margin-right: -15px !important;
+}

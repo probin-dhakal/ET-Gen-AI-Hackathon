@@ -14,7 +14,7 @@ const LeftPanel = () => {
         <h1 className="font-serif text-3xl font-bold leading-tight mb-2 hover:text-[#cc0000] cursor-pointer">
           Mosaic Defence: An Iranian war mirage that keeps its fight alive
         </h1>
-        
+
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 my-4 text-sm">
           <p className="font-bold text-blue-800 mb-2">AI Generated Arc Prediction:</p>
           <ul className="space-y-2 border-l-2 border-blue-300 ml-2 pl-3">
