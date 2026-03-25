@@ -28,6 +28,10 @@ class VideoScript(BaseModel):
     scenes: List[Scene]
 
 
+# ==============================
+# 🎬 GENERATOR
+# ==============================
+
 class NewsVideoGenerator:
     def __init__(self):
         api_key = os.getenv("AZURE_OPENAI_API_KEY")
@@ -53,27 +57,67 @@ class NewsVideoGenerator:
             response_format=VideoScript
         )
 
-    # 🧠 Generate scenes
+        # Narration generator (PLAIN TEXT ONLY)
+        self.narration_model = init_chat_model("google_genai:gemini-2.5-flash")
+
+
+    # ==============================
+    # 🧠 SCENES
+    # ==============================
+
     def generate_script(self, article):
         prompt = f"""
-Convert article into professional news video script.
+Create EXACTLY 5 short scenes for a news video.
 
-STRICT:
-- 6 to 8 scenes
-- Each max 12 words
-- Add highlight (2-4 words)
-- Add image_prompt (visual scene description)
+Rules:
+- Each scene max 10 words
+- Add highlight (2-3 words)
+- Add image_prompt
+- No narration, just visual text
 
-Article:
-{article}
-"""
+    Article:
+    {article}
+    """
+
         result = self.agent.invoke({
             "messages": [{"role": "user", "content": prompt}]
         })
 
         return result["structured_response"]
 
-    # 🎨 Cloudflare Image
+
+    # ==============================
+    # 🎙️ NARRATION (DYNAMIC LENGTH)
+    # ==============================
+
+    def generate_narration(self, article):
+        prompt = f"""
+Write a professional news narration.
+
+STRICT:
+- Duration between 50 to 90 seconds
+- Smooth storytelling
+- Start with a greeting (like: Good evening / Welcome)
+- No instructions, no labels
+
+Article:
+{article}
+"""
+
+        result = self.narration_model.invoke(prompt)
+
+        narration = result.content.strip()
+
+        # remove any accidental prompt leakage
+        narration = re.sub(r'(Article:.*)', '', narration, flags=re.DOTALL)
+
+        return narration
+
+
+    # ==============================
+    # 🎨 IMAGE
+    # ==============================
+
     def generate_image(self, prompt, index):
         try:
             url = f"https://api.cloudflare.com/client/v4/accounts/{os.getenv('CF_ACCOUNT_ID')}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
@@ -106,11 +150,24 @@ Article:
             print("Image error:", e)
             return "fallback.jpg"
 
-    # 🎙️ Audio
-    def generate_audio(self, scenes):
-        text = " ".join([s["text"] for s in scenes])
 
-        path = "../remotion-server/public/audio.mp3"
+    # ==============================
+    # 🎧 AUDIO (AZURE)
+    # ==============================
+
+    def generate_audio(self, narration):
+        speech_config = speechsdk.SpeechConfig(
+            subscription=os.getenv("AZURE_SPEECH_KEY"),
+            region=os.getenv("AZURE_SPEECH_REGION")
+        )
+
+        speech_config.set_speech_synthesis_output_format(
+            speechsdk.SpeechSynthesisOutputFormat.Audio16Khz128KBitRateMonoMp3
+        )
+
+        speech_config.speech_synthesis_voice_name = "en-IN-NeerjaNeural"
+
+        output = "../remotion-server/public/audio.mp3"
         os.makedirs("../remotion-server/public", exist_ok=True)
 
         tts = gTTS(text)
@@ -118,6 +175,15 @@ Article:
 
         audio = AudioSegment.from_mp3(path)
         duration = len(audio) / 1000
+
+        # ✅ enforce 50–90 sec
+        if duration < 50:
+            narration += " Thank you for watching."
+            return self.generate_audio(narration)
+
+        if duration > 90:
+            narration = " ".join(narration.split()[:180])
+            return self.generate_audio(narration)
 
         return "audio.mp3", duration
 
@@ -131,25 +197,33 @@ Article:
         return res.json()
 
     # 🎬 MAIN
+    # ==============================
+
     def generate_video(self, article, title):
         script = self.generate_script(article)
 
+        narration = self.generate_narration(article)
+        audio_file, duration = self.generate_audio(narration)
+
         scenes = []
 
-        for i, s in enumerate(script.scenes):
-            if i < 3:
-                img = self.generate_image(s.image_prompt, i)
-                time.sleep(1)
-            else:
-                img = f"image_{i % 3}.png"
+        # 🎯 INTRO SCENE
+        if narration.lower().startswith(("good", "welcome")):
+            scenes.append({
+                "text": "Welcome to today's news",
+                "highlight": "Breaking News",
+                "image": "image_0.png"
+            })
+
+        # 🎯 MAIN SCENES
+        for i, s in enumerate(script.scenes[:5]):
+            img = self.generate_image(s.image_prompt, i % 3)
 
             scenes.append({
                 "text": s.text,
                 "highlight": s.highlight,
                 "image": img
             })
-
-        audio_file, duration = self.generate_audio(scenes)
 
         frames = int(duration * 30)
 

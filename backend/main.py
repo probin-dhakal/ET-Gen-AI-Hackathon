@@ -49,6 +49,7 @@ class ArticleRequest(BaseModel):
 class VideoRequest(BaseModel):
     article: str
     title: str | None = "Generated Video"
+    language: str = "english"
 
 
 
@@ -217,12 +218,16 @@ def get_translation(article_id: int, language: str):
 
 @app.post("/generate-video")
 def generate_video(request_data: VideoRequest):
-    """Generate a video from article text."""
     try:
         generator = NewsVideoGenerator()
+
+        # ✅ safe handling
+        language = (request_data.language or "english").lower()
+
         result = generator.generate_video(
             request_data.article,
-            request_data.title
+            request_data.title,
+            language
         )
 
         return {
@@ -231,6 +236,8 @@ def generate_video(request_data: VideoRequest):
         }
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()  # 🔥 helps debugging
         raise HTTPException(status_code=500, detail=str(e))
 
 
