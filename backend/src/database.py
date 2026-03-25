@@ -815,6 +815,23 @@ class DatabaseManager:
             
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
+
+    def get_latest_articles(self, limit: int = 20) -> List[dict]:
+        """Get latest articles with full fields for feed rendering."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT id, heading, body, nucleus_summary, author, source_url,
+                       source_name, category, language, word_count, image_url,
+                       published_at, created_at
+                FROM articles
+                ORDER BY datetime(COALESCE(published_at, created_at)) DESC, id DESC
+                LIMIT ?
+            """, (limit,))
+
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
     
     def get_articles_by_category(self, category: str, limit: int = 50) -> List[dict]:
         """Get all articles in a category."""
@@ -822,8 +839,8 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT id, heading, author, source_name,
-                       published_at, image_url
+                SELECT id, heading, body, nucleus_summary, author, source_url, source_name,
+                       category, language, word_count, published_at, image_url
                 FROM articles
                 WHERE category = ?
                 ORDER BY published_at DESC

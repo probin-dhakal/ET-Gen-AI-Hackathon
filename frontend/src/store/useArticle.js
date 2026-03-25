@@ -94,8 +94,7 @@ export const useArticleStore = create((set, get) => ({
             const article_id = get().article_id;
 
             if (!article_id) {
-                console.error("No article_id found");
-                return;
+                throw new Error("No article_id found");
             }
 
             const res = await axiosInstance.get(
@@ -108,6 +107,11 @@ export const useArticleStore = create((set, get) => ({
 
         } catch (error) {
             console.error("Translation error:", error);
+            const backendMessage = error?.response?.data?.detail;
+            if (backendMessage) {
+                throw new Error(backendMessage);
+            }
+            throw error;
         }
     },
 

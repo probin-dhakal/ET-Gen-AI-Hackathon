@@ -49,7 +49,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
         }
       };
 
-      navigate("/article", { state: { article } });
+      navigate(`/article/${article_id}`, { state: { article } });
 
     } catch (error) {
       console.error("Navigation error:", error);
@@ -90,10 +90,9 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
           throw new Error('Unsupported language');
         }
 
-        const articleBody = cleanContent || cleanDescription || '';
-
-        if (!articleBody || articleBody.length < 10) {
-          throw new Error('Article content is too short to translate. Please select a different article.');
+        if (!article_id) {
+          // Wait for addArticle/setArticleId to finish; effect will rerun once article_id is ready.
+          return;
         }
 
         const response = await getTranslation(languageCode);
@@ -109,9 +108,11 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
         // Handle common errors
         if (errorMessage.includes('Failed to fetch')) {
-          errorMessage = 'Backend server is not running. Start it with: uvicorn main:app --reload';
-        } else if (errorMessage.includes('GEMINI_API_KEY')) {
-          errorMessage = 'API key not configured. Set GEMINI_API_KEY environment variable.';
+          errorMessage = 'Backend server is not reachable. Start it with: uvicorn main:app --reload --port 8001 (or 8000).';
+        } else if (errorMessage.includes('AZURE_OPENAI_API_KEY') || errorMessage.includes('GEMINI_API_KEY')) {
+          errorMessage = 'API key not configured. Set AZURE_OPENAI_API_KEY environment variable.';
+        } else if (errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('Quota exceeded') || errorMessage.includes('429')) {
+          errorMessage = 'Translation quota exceeded for the configured AI provider. Please add billing/credits or switch to a key with available quota.';
         }
 
         setError(errorMessage);
@@ -122,7 +123,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
     };
 
     fetchTranslation();
-  }, [activeLanguage, article, cleanContent, cleanDescription]);
+  }, [activeLanguage, article, cleanContent, cleanDescription, article_id]);
 
   return (
     <main className="max-w-7xl mx-auto p-4 mt-4">

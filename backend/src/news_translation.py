@@ -4,8 +4,8 @@ from pydantic import BaseModel, Field
 from langchain.agents import create_agent
 from src.prompts import get_translation_prompt
 from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
 from langchain_openai import AzureChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Load environment variables from .env file
 load_dotenv()
@@ -16,10 +16,10 @@ class TranslatedArticle(BaseModel):
     target_language: str = Field(description="Target language for translation")
     original_heading: str = Field(description="Original English heading")
     original_body: str = Field(description="Original English article body")
-    translated_heading: str = Field(description="Translated heading in target language")
-    translated_body: str = Field(description="Translated body in target language with cultural context")
-    local_context: str = Field(description="Additional local context relevant to target region")
-    translation_notes: Optional[str] = Field(description="Any important notes about cultural adaptations made")
+    translated_heading: str = Field(default="", description="Translated heading in target language")
+    translated_body: str = Field(default="", description="Translated body in target language with cultural context")
+    local_context: str = Field(default="", description="Additional local context relevant to target region")
+    translation_notes: Optional[str] = Field(default=None, description="Any important notes about cultural adaptations made")
 
 
 class VernacularNewsTranslator:
@@ -31,25 +31,40 @@ class VernacularNewsTranslator:
     """
     
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize the translator with create_agent using Gemini 2.5 Flash."""
-        api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        if "AZURE_OPENAI_API_KEY" not in os.environ:
-            print("⚠️ Warning: AZURE_OPENAI_API_KEY not found in environment variables. Please set it in your .env file.")
-            os.environ["AZURE_OPENAI_API_KEY"] = api_key
-        
-        os.environ["AZURE_OPENAI_API_KEY"] = api_key
-        os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("AZURE_OPENAI_ENDPOINT")
+        """Initialize the translator with Azure OpenAI, falling back to Gemini when configured."""
+        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+        azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION")
 
-        # Use Azure OpenAI with LangChain
-        model = AzureChatOpenAI(
-            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-            temperature=0.7,
-            max_tokens=None,
-            timeout=None,
-            max_retries=2
-        )
+        gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
+        if azure_api_key and azure_endpoint and azure_deployment and azure_api_version:
+            model = AzureChatOpenAI(
+                azure_endpoint=azure_endpoint,
+                api_key=azure_api_key,
+                azure_deployment=azure_deployment,
+                api_version=azure_api_version,
+                temperature=0.7,
+                max_tokens=None,
+                timeout=None,
+                max_retries=2
+            )
+        elif gemini_api_key:
+            model = ChatGoogleGenerativeAI(
+                model=gemini_model,
+                google_api_key=gemini_api_key,
+                temperature=0.7,
+            )
+        else:
+            raise RuntimeError(
+                "Translation provider not configured. "
+                "Set AZURE_OPENAI_API_KEY/AZURE_OPENAI_ENDPOINT/AZURE_OPENAI_DEPLOYMENT_NAME/AZURE_OPENAI_API_VERSION "
+                "or set GEMINI_API_KEY."
+            )
+
+        self.model = model
 
         self.agent = create_agent(
             model=model,
@@ -109,11 +124,44 @@ Remember to:
             
             # Extract structured response directly
             translated_article = result["structured_response"]
+
+            # Guard against partial structured output from some providers.
+            if not translated_article.translated_heading:
+                translated_article.translated_heading = article_heading
+            if not translated_article.translated_body:
+                translated_article.translated_body = article_body
             
             return translated_article
             
         except Exception as e:
-            raise RuntimeError(f"Translation failed: {str(e)}")
+            # Fallback: use raw model output and map into the expected shape.
+            try:
+                raw = self.model.invoke(translation_request)
+                raw_content = getattr(raw, "content", "")
+
+                if isinstance(raw_content, list):
+                    raw_text = "\n".join(
+                        str(part.get("text", "")) if isinstance(part, dict) else str(part)
+                        for part in raw_content
+                    ).strip()
+                else:
+                    raw_text = str(raw_content).strip()
+
+                translated_heading = raw_text.splitlines()[0][:200] if raw_text else article_heading
+                translated_body = raw_text if raw_text else article_body
+
+                return TranslatedArticle(
+                    original_language="English",
+                    target_language=language_name,
+                    original_heading=article_heading,
+                    original_body=article_body,
+                    translated_heading=translated_heading,
+                    translated_body=translated_body,
+                    local_context="",
+                    translation_notes="Fallback translation used due to structured parsing failure."
+                )
+            except Exception:
+                raise RuntimeError(f"Translation failed: {str(e)}")
     
     def translate_batch(
         self,

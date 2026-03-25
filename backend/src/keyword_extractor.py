@@ -9,6 +9,7 @@ from typing import List
 from pydantic import BaseModel, Field
 from langchain.agents import create_agent
 from langchain_openai import AzureChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -35,30 +36,82 @@ class HeadingKeywordExtractor:
     """
     
     def __init__(self):
-        """Initialize the extractor with Azure OpenAI model."""
-        # Get Azure OpenAI configuration
-        api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        if "AZURE_OPENAI_API_KEY" not in os.environ:
-            print("⚠️ Warning: AZURE_OPENAI_API_KEY not found in environment variables. Please set it in your .env file.")
-            os.environ["AZURE_OPENAI_API_KEY"] = api_key
-        
-        os.environ["AZURE_OPENAI_API_KEY"] = api_key
-        os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("AZURE_OPENAI_ENDPOINT")
+        """Initialize extractor with Azure/Gemini model; fallback to heuristic mode when unavailable."""
+        self.agent = None
 
-        # Use Azure OpenAI with LangChain
-        model = AzureChatOpenAI(
-            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-            temperature=0.7,
-            max_tokens=None,
-            timeout=None,
-            max_retries=2
+        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+        azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+
+        gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        gemini_model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
+        try:
+            if azure_api_key and azure_endpoint and azure_deployment and azure_api_version:
+                model = AzureChatOpenAI(
+                    azure_endpoint=azure_endpoint,
+                    api_key=azure_api_key,
+                    azure_deployment=azure_deployment,
+                    api_version=azure_api_version,
+                    temperature=0.7,
+                    max_tokens=None,
+                    timeout=None,
+                    max_retries=2
+                )
+            elif gemini_api_key:
+                model = ChatGoogleGenerativeAI(
+                    model=gemini_model,
+                    google_api_key=gemini_api_key,
+                    temperature=0.7,
+                )
+            else:
+                model = None
+
+            if model is not None:
+                self.agent = create_agent(
+                    model=model,
+                    response_format=ExtractedKeywords,
+                )
+        except Exception:
+            # Keep extractor usable even if model initialization fails.
+            self.agent = None
+
+    def _fallback_extraction(self, article_heading: str, article_body: str = None) -> ExtractedKeywords:
+        """Heuristic extraction used when LLM provider is unavailable/quota-exhausted."""
+        text = f"{article_heading} {article_body or ''}".strip()
+        tokens = [
+            token.strip(".,:;!?()[]{}\"'`")
+            for token in text.split()
+        ]
+        stopwords = {
+            "the", "and", "for", "with", "from", "this", "that", "into", "over", "under",
+            "about", "amid", "after", "before", "will", "have", "has", "had", "was", "were",
+            "are", "is", "of", "in", "on", "to", "by", "at", "as", "an", "a", "or"
+        }
+        filtered = [t for t in tokens if len(t) > 2 and t.lower() not in stopwords]
+
+        phrases = []
+        for i in range(len(filtered) - 1):
+            phrase = f"{filtered[i]} {filtered[i + 1]}"
+            if phrase not in phrases:
+                phrases.append(phrase)
+            if len(phrases) >= 5:
+                break
+
+        if not phrases and article_heading:
+            phrases = [article_heading[:40].strip()]
+
+        nucleus = (
+            (article_body or "").strip()[:350]
+            or article_heading.strip()[:200]
+            or "Summary unavailable"
         )
 
-        
-        self.agent = create_agent(
-            model=model,
-            response_format=ExtractedKeywords,
+        return ExtractedKeywords(
+            nucleus_summary=nucleus,
+            keywords=phrases[:5],
+            confidence_score=0.35
         )
     
     def extract_keywords_from_heading(
@@ -116,6 +169,9 @@ This is the article body for additional context (use only for neucleus summary):
 Return ONLY best clean keywords that are unique to this story arc, and a 5-sentence nucleus summary."""
 
         try:
+            if self.agent is None:
+                return self._fallback_extraction(article_heading, article_body)
+
             result = self.agent.invoke({
                 "messages": [
                     {"role": "user", "content": extraction_prompt}
@@ -131,7 +187,8 @@ Return ONLY best clean keywords that are unique to this story arc, and a 5-sente
             return keywords_obj
             
         except Exception as e:
-            raise RuntimeError(f"Keyword extraction failed: {str(e)}")
+            # If provider fails (e.g., quota/config), keep pipeline functional.
+            return self._fallback_extraction(article_heading, article_body)
     
     def extract_batch(
         self,

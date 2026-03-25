@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Loader } from 'lucide-react';
+import axiosInstance from '../lib/axiosinstance';
 
 const CenterFeed = ({ onArticleClick }) => {
     const handleArticleClick = (article, index) => {
@@ -13,29 +14,28 @@ const CenterFeed = ({ onArticleClick }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const API_KEY = import.meta.env.VITE_NEWS_API_KEY; 
-
-    const topHeadlinesUrl = `https://newsapi.org/v2/top-headlines?country=in&category=business&pageSize=3&apiKey=${API_KEY}`;
-    const fallbackUrl = `https://newsapi.org/v2/everything?q=india%20business&language=en&sortBy=publishedAt&pageSize=3&apiKey=${API_KEY}`;
-
-    const fetchNews = async () => {
+    const fetchArticlesFromDb = async () => {
       try {
-        const topHeadlinesResponse = await fetch(topHeadlinesUrl);
-        if (!topHeadlinesResponse.ok) throw new Error('Failed to fetch news');
+        const response = await axiosInstance.get('/api/feed/latest', {
+          params: { limit: 12 }
+        });
 
-        const topHeadlinesData = await topHeadlinesResponse.json();
-        let fetchedArticles = topHeadlinesData.articles || [];
+        const fetchedArticles = response.data?.articles || [];
+        const mappedArticles = fetchedArticles.map((item) => ({
+          article_id: item.id,
+          title: item.heading,
+          description: item.nucleus_summary || (item.body || '').slice(0, 240),
+          content: item.body || '',
+          author: item.author || 'ET Bureau',
+          url: item.source_url || '',
+          urlToImage: item.image_url || '',
+          publishedAt: item.published_at,
+          source: {
+            name: item.source_name || 'ET Bureau'
+          }
+        }));
 
-        // Fallback to a broader query when top headlines are temporarily empty.
-        if (fetchedArticles.length === 0) {
-          const fallbackResponse = await fetch(fallbackUrl);
-          if (!fallbackResponse.ok) throw new Error('Failed to fetch fallback news');
-
-          const fallbackData = await fallbackResponse.json();
-          fetchedArticles = fallbackData.articles || [];
-        }
-
-        setArticles(fetchedArticles.slice(0, 3));
+        setArticles(mappedArticles.slice(0, 3));
         setError(null);
         setIsLoading(false);
       } catch (err) {
@@ -45,7 +45,7 @@ const CenterFeed = ({ onArticleClick }) => {
       }
     };
 
-    fetchNews();
+    fetchArticlesFromDb();
   }, []);
 
   const generateAIContext = (index) => {
@@ -79,13 +79,13 @@ const CenterFeed = ({ onArticleClick }) => {
 
           {error && (
             <div className="text-red-600 p-4 border border-red-200 bg-red-50 rounded">
-              Unable to load live news feed. Please check your API key.
+              Unable to load articles from database. Please check backend connectivity.
             </div>
           )}
 
           {!isLoading && !error && articles.length === 0 && (
             <div className="text-amber-700 p-4 border border-amber-200 bg-amber-50 rounded">
-              No fresh business headlines are available right now. Please check back shortly.
+              No articles found in the database yet.
             </div>
           )}
 
@@ -98,7 +98,11 @@ const CenterFeed = ({ onArticleClick }) => {
               <img 
                 src={article.urlToImage || `/api/placeholder/100/100?text=ET+News`} 
                 alt="News" 
-                className="w-24 h-24 object-cover rounded shrink-0" 
+                className="w-24 h-24 object-cover rounded shrink-0"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = '/api/placeholder/100/100?text=ET+News';
+                }}
               />
               <div>
                 <h3 className="font-serif font-bold text-lg group-hover:text-[#cc0000] leading-snug">

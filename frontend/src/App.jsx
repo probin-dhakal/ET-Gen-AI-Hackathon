@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, useNavigate, useLocation, useParams } from "react-router-dom";
 import Header from './components/Header';
 import LeftPanel from './components/LeftPanel';
 import CenterPersonalizedFeed from './components/CenterFeed';
@@ -10,14 +10,51 @@ import Storyarc from './components/Storyarc.jsx';
 
 const HomePage = ({ setActiveLanguage, activeLanguage }) => {
 
-  const { addArticle } = useArticleStore();
+  const { addArticle, setArticleId, getArticleById } = useArticleStore();
 
   const navigate = useNavigate();
 
-  const handleArticleClick =  (article) => {
-    navigate("/article", { state: { article } });
-    addArticle(article);
-    console.log(article);
+  const handleArticleClick = async (article) => {
+    let nextArticle = article;
+
+    if (article.article_id) {
+      try {
+        const dbArticle = await getArticleById(article.article_id);
+        if (dbArticle) {
+          nextArticle = {
+            article_id: dbArticle.id,
+            title: dbArticle.heading,
+            description: dbArticle.nucleus_summary || (dbArticle.body || '').slice(0, 240),
+            content: dbArticle.body || '',
+            author: dbArticle.author || 'ET Bureau',
+            url: dbArticle.source_url || '',
+            urlToImage: dbArticle.image_url || '',
+            publishedAt: dbArticle.published_at,
+            source: {
+              name: dbArticle.source_name || 'ET Bureau'
+            },
+            aiContext: article.aiContext
+          };
+        }
+      } catch (error) {
+        console.error('Failed to fetch article by ID:', error);
+      }
+    }
+
+    const routeArticleId = nextArticle.article_id;
+    if (routeArticleId) {
+      navigate(`/article/${routeArticleId}`, { state: { article: nextArticle } });
+    } else {
+      navigate("/article", { state: { article: nextArticle } });
+    }
+
+    if (nextArticle.article_id) {
+      setArticleId(nextArticle.article_id);
+    } else {
+      addArticle(nextArticle);
+    }
+
+    console.log(nextArticle);
   };
 
   return (
@@ -49,12 +86,67 @@ const ArticlePage = ({ activeLanguage, setActiveLanguage }) => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { articleId } = useParams();
+  const { getArticleById, setArticleId } = useArticleStore();
 
-  const article = location.state?.article;
+  const [routeArticle, setRouteArticle] = useState(location.state?.article || null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadArticleFromRoute = async () => {
+      if (!articleId) {
+        return;
+      }
+
+      try {
+        const id = Number(articleId);
+        if (!Number.isFinite(id)) {
+          return;
+        }
+
+        const rawArticle = await getArticleById(id);
+        if (!rawArticle || !isMounted) {
+          return;
+        }
+
+        const mapped = {
+          article_id: rawArticle.id,
+          title: rawArticle.heading,
+          description: rawArticle.nucleus_summary || (rawArticle.body || '').slice(0, 240),
+          content: rawArticle.body || '',
+          author: rawArticle.author || 'ET Bureau',
+          url: rawArticle.source_url || '',
+          urlToImage: rawArticle.image_url || '',
+          publishedAt: rawArticle.published_at,
+          source: {
+            name: rawArticle.source_name || 'ET Bureau'
+          }
+        };
+
+        setRouteArticle(mapped);
+        setArticleId(id);
+      } catch (error) {
+        console.error('Failed to load route article:', error);
+      }
+    };
+
+    loadArticleFromRoute();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [articleId, getArticleById, setArticleId]);
+
+  const article = routeArticle || location.state?.article;
 
   const handleBackToHome = () => {
     navigate("/");
   };
+
+  if (!article) {
+    return <div className="max-w-7xl mx-auto p-4 mt-4 text-gray-600">Loading article...</div>;
+  }
 
   return (
     <ArticleDetailView
@@ -89,6 +181,16 @@ const App = () => {
 
         <Route
           path="/article"
+          element={
+            <ArticlePage
+              activeLanguage={activeLanguage}
+              setActiveLanguage={setActiveLanguage}
+            />
+          }
+        />
+
+        <Route
+          path="/article/:articleId"
           element={
             <ArticlePage
               activeLanguage={activeLanguage}

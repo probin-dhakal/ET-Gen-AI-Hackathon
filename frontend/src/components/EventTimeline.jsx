@@ -28,7 +28,7 @@ export const EventTimeline = ({ events = [] }) => {
                 }
             };
 
-            navigate("/article", { state: { article } });
+            navigate(`/article/${article_id}`, { state: { article } });
 
         } catch (error) {
             console.error("Navigation error:", error);

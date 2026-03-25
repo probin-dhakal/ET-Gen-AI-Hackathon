@@ -8,8 +8,13 @@ from src.news_translation import VernacularNewsTranslator
 from src.database import DatabaseManager
 from fastapi.staticfiles import StaticFiles
 import json
+import os
 
 app = FastAPI()
+
+# Vector indexing/search can trigger native-library crashes on some Windows setups.
+# Keep it opt-in so core API routes (add/process/translate) remain stable.
+VECTOR_INDEXING_ENABLED = os.getenv("ENABLE_VECTOR_INDEXING", "false").lower() == "true"
 
 # Initialize database
 db = DatabaseManager()
@@ -135,7 +140,6 @@ def add_and_process_article(request: ArticleRequest):
     """
     try:
         from src.keyword_extractor import HeadingKeywordExtractor
-        from src.vector_store import VectorStore
         
         # Step 1: Insert article with all metadata into unified articles table
         article_id = db.insert_article(
@@ -163,12 +167,19 @@ def add_and_process_article(request: ArticleRequest):
         keywords = extracted.keywords
         confidence = extracted.confidence_score
         
-        # Step 3: Add to vector DB for semantic search
-        vector_store = VectorStore()
-        vector_store.add_article(
-            article_id=article_id,
-            nucleus_summary=nucleus_summary
-        )
+        # Step 3: Add to vector DB for semantic search (optional/safe-mode)
+        vector_indexed = False
+        if VECTOR_INDEXING_ENABLED:
+            try:
+                from src.vector_store import VectorStore
+                vector_store = VectorStore()
+                vector_store.add_article(
+                    article_id=article_id,
+                    nucleus_summary=nucleus_summary
+                )
+                vector_indexed = True
+            except Exception:
+                vector_indexed = False
         
         # Step 4: Store keywords directly in article_keywords_list table
         keyword_ids = db.add_keywords_to_article(
@@ -186,6 +197,7 @@ def add_and_process_article(request: ArticleRequest):
             "keywords": keywords,
             "keyword_count": len(keywords),
             "confidence_score": confidence,
+            "vector_indexed": vector_indexed,
             "message": f"Article '{request.heading[:50]}...' added and processed successfully with {len(keywords)} keywords stored"
         }
     
@@ -292,13 +304,34 @@ def get_articles_by_keyword_name(keyword_name: str, limit: int = 10):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
+@app.get("/api/articles/{article_id}")
+def get_article_by_id(article_id: int):
     """Get full article by ID."""
     try:
         article = db.get_full_article(article_id)
         if not article:
             raise HTTPException(status_code=404, detail="Article not found")
         return article
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/articles/latest")
+def get_latest_articles(limit: int = 20):
+    """Get latest articles from local database for feed UI."""
+    try:
+        articles = db.get_latest_articles(limit=limit)
+        return {"count": len(articles), "articles": articles}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/feed/latest")
+def get_latest_feed_articles(limit: int = 20):
+    """Get latest articles across all categories for homepage feed."""
+    try:
+        articles = db.get_latest_articles(limit=limit)
+        return {"count": len(articles), "articles": articles}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -456,7 +489,6 @@ def process_article(article_id: int):
     """
     try:
         from src.keyword_extractor import HeadingKeywordExtractor
-        from src.vector_store import VectorStore
         
         # Step 1: Get article from database
         article = db.get_full_article(article_id)
@@ -477,12 +509,19 @@ def process_article(article_id: int):
         # Step 3: Update article with AI-generated nucleus summary
         db.update_nucleus_summary(article_id, nucleus_summary)
         
-        # Step 4: Add to vector DB for semantic search
-        vector_store = VectorStore()
-        vector_store.add_article(
-            article_id=article_id,
-            nucleus_summary=nucleus_summary
-        )
+        # Step 4: Add to vector DB for semantic search (optional/safe-mode)
+        vector_indexed = False
+        if VECTOR_INDEXING_ENABLED:
+            try:
+                from src.vector_store import VectorStore
+                vector_store = VectorStore()
+                vector_store.add_article(
+                    article_id=article_id,
+                    nucleus_summary=nucleus_summary
+                )
+                vector_indexed = True
+            except Exception:
+                vector_indexed = False
         
         # Step 5: Store keywords in article_keywords_list table
         keyword_ids = db.add_keywords_to_article(
@@ -498,7 +537,8 @@ def process_article(article_id: int):
             "keywords": keywords,
             "keyword_count": len(keywords),
             "confidence_score": confidence,
-            "message": f"Article processed: {len(keywords)} keywords extracted, summary updated, and indexed"
+            "vector_indexed": vector_indexed,
+            "message": f"Article processed: {len(keywords)} keywords extracted, summary updated"
         }
     
     except HTTPException:
@@ -522,8 +562,38 @@ def search_articles_vector(query: str, top_k: int = 5):
         - llm_response: Intelligent response from Azure LLM with insights
     """
     try:
-        from src.vector_store import VectorStore
         from src.search_response_generator import SearchResponseGenerator
+
+        if not VECTOR_INDEXING_ENABLED:
+            fallback_articles = db.search_full_articles(query, limit=top_k)
+            formatted = []
+            for article in fallback_articles:
+                formatted.append({
+                    "article_id": article.get("id"),
+                    "heading": article.get("heading"),
+                    "body": "",
+                    "search_score": 0.5,
+                    "source_url": article.get("source_url"),
+                    "author": article.get("author"),
+                    "category": article.get("category"),
+                    "published_at": article.get("published_at")
+                })
+
+            return {
+                "status": "success",
+                "query": query,
+                "results_count": len(formatted),
+                "articles": formatted,
+                "llm_response": {
+                    "user_query": query,
+                    "response_summary": "Vector search is disabled in safe mode. Showing keyword-based matches.",
+                    "key_insights": [],
+                    "confidence_score": 0.5 if formatted else 0.0
+                },
+                "mode": "keyword_fallback"
+            }
+
+        from src.vector_store import VectorStore
         
         # Step 1: Perform semantic search
         vector_store = VectorStore()
