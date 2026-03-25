@@ -17,7 +17,7 @@ load_dotenv()
 class ExtractedKeywords(BaseModel):
     """Structured output for keyword extraction from article headings."""
     nucleus_summary: str = Field(
-        description="3-sentence summary capturing the NEW information in this article"
+        description="5-sentence summary capturing the NEW information in this article"
     )
     keywords: List[str] = Field(
         description="List of 3-7 unique, clean keywords/story arcs (no duplicates, no extra context)"
@@ -83,7 +83,7 @@ class HeadingKeywordExtractor:
         extraction_prompt = f"""You are a news keyword extraction expert. Your job is to:
 
 1. Read the article heading and optional body
-2. EXTRACT the "nucleus" - what is NEW and UNIQUE in this story (3 sentences max)
+2. EXTRACT the "nucleus" - what is NEW and UNIQUE in this story (5 sentences max)
 3. IDENTIFY story arcs (recurring themes across days/weeks) like:
    - "Union Budget 2026"
    - "RBI Rate Hike"
@@ -110,9 +110,10 @@ Keywords: ["Startup Funding Wave", "Q3 Tech IPO", "Market Slowdown"]
 Now extract from this article:
 
 HEADING: {article_heading}
+This is the article body for additional context (use only for neucleus summary):
 {body_context}
 
-Return ONLY 3-7 clean keywords that are unique to this story arc, and a 3-sentence nucleus summary."""
+Return ONLY best clean keywords that are unique to this story arc, and a 5-sentence nucleus summary."""
 
         try:
             result = self.agent.invoke({

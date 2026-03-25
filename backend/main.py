@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
-from src.news_translation import VernacularNewsTranslator
-from src.news_summarization import NewsVideoGenerator
+from src.news_translation import VernacularNewsTranslator 
+# from src.news_summarization import NewsVideoGenerator
 from src.database import DatabaseManager
 from fastapi.staticfiles import StaticFiles
 import json
@@ -69,26 +69,29 @@ def home():
 @app.post("/api/articles/add")
 def add_article(request: ArticleRequest):
     """
-    Add a new article to the database.
+    Add a new article to the database with AI-generated nucleus summary.
     
     Returns:
-        - article_id: ID in articles table
-        - full_article_id: ID in articles_full table
+        - article_id: ID of the created article (unified articles table)
+        - nucleus_summary: AI-generated summary
     """
     try:
-        # Step 1: Add to articles table
-        article_id = db.insert_article(
-            heading=request.heading,
-            nucleus_summary=request.body[:200] if request.body else request.heading,
-            source_url=request.source_url,
-            language=request.language
+        from src.keyword_extractor import HeadingKeywordExtractor
+        
+        # Generate nucleus summary using AI
+        extractor = HeadingKeywordExtractor()
+        extracted = extractor.extract_keywords_from_heading(
+            article_heading=request.heading,
+            article_body=request.body or ""
         )
         
-        # Step 2: Add to articles_full table
-        full_article_id = db.insert_full_article(
-            article_id=article_id,
+        nucleus_summary = extracted.nucleus_summary
+        
+        # Insert article with AI-generated summary
+        article_id = db.insert_article(
             heading=request.heading,
             body=request.body,
+            nucleus_summary=nucleus_summary,
             author=request.author,
             source_url=request.source_url,
             source_name=request.source_name,
@@ -102,16 +105,194 @@ def add_article(request: ArticleRequest):
         return {
             "status": "success",
             "article_id": article_id,
-            "full_article_id": full_article_id,
-            "message": f"Article '{request.heading[:50]}...' added successfully"
+            "nucleus_summary": nucleus_summary,
+            "message": f"Article '{request.heading[:50]}...' added successfully with AI-generated summary"
         }
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/articles/{article_id}")
-def get_article(article_id: int):
+@app.post("/api/articles/add-and-process")
+def add_and_process_article(request: ArticleRequest):
+    """
+    Add a new article to database AND extract keywords + add to vector DB in one step.
+    Keywords are stored directly in the article_keywords_list table linked to the article.
+    
+    Workflow:
+    1. Insert article with all metadata 
+    2. Extract keywords and nucleus summary using HeadingKeywordExtractor
+    3. Add article to vector DB for semantic search
+    4. Store keywords directly in article_keywords_list table
+    5. Return article info with keywords and summary
+    
+    Returns:
+        - article_id: ID of the created article
+        - nucleus_summary: AI-generated summary of the article
+        - keywords: List of extracted keywords
+        - keyword_count: Number of keywords
+        - confidence_score: Confidence of keyword extraction
+    """
+    try:
+        from src.keyword_extractor import HeadingKeywordExtractor
+        from src.vector_store import VectorStore
+        
+        # Step 1: Insert article with all metadata into unified articles table
+        article_id = db.insert_article(
+            heading=request.heading,
+            body=request.body,
+            nucleus_summary=request.body[:200] if request.body else request.heading,
+            author=request.author,
+            source_url=request.source_url,
+            source_name=request.source_name,
+            category=request.category,
+            language=request.language,
+            word_count=request.word_count,
+            image_url=request.image_url,
+            published_at=request.published_at or datetime.now().isoformat()
+        )
+        
+        # Step 2: Extract keywords and nucleus summary
+        extractor = HeadingKeywordExtractor()
+        extracted = extractor.extract_keywords_from_heading(
+            article_heading=request.heading,
+            article_body=request.body or ""
+        )
+        
+        nucleus_summary = extracted.nucleus_summary
+        keywords = extracted.keywords
+        confidence = extracted.confidence_score
+        
+        # Step 3: Add to vector DB for semantic search
+        vector_store = VectorStore()
+        vector_store.add_article(
+            article_id=article_id,
+            nucleus_summary=nucleus_summary
+        )
+        
+        # Step 4: Store keywords directly in article_keywords_list table
+        keyword_ids = db.add_keywords_to_article(
+            article_id=article_id,
+            keywords=keywords,
+            relevance_score=confidence
+        )
+        
+        # Step 5: Return article info with keywords and summary
+        return {
+            "status": "success",
+            "article_id": article_id,
+            "heading": request.heading,
+            "nucleus_summary": nucleus_summary,
+            "keywords": keywords,
+            "keyword_count": len(keywords),
+            "confidence_score": confidence,
+            "message": f"Article '{request.heading[:50]}...' added and processed successfully with {len(keywords)} keywords stored"
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/articles/{article_id}/keywords/add")
+def add_keywords_to_article_manual(article_id: int, keywords: list):
+    """
+    Manually add keywords to an existing article (after article has been created).
+    
+    Args:
+        article_id: ID of the article
+        keywords: List of keyword strings to add
+    
+    Returns:
+        Confirmation with keywords added
+    """
+    try:
+        # Verify article exists
+        article = db.get_full_article(article_id)
+        if not article:
+            raise HTTPException(status_code=404, detail="Article not found")
+        
+        # Add keywords to article
+        db.add_keywords_to_article(article_id=article_id, keywords=keywords, relevance_score=1.0)
+        
+        # Get all keywords for the article
+        all_keywords = db.get_keywords_for_article(article_id)
+        
+        return {
+            "status": "success",
+            "article_id": article_id,
+            "message": f"Added {len(keywords)} keywords to article",
+            "keywords_added": keywords,
+            "total_keywords": all_keywords,
+            "total_count": len(all_keywords)
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+def get_article_keywords(article_id: int):
+    """
+    Get all keywords for a specific article from article_keywords_list table.
+    
+    Args:
+        article_id: ID of the article
+    
+    Returns:
+        List of keywords with relevance scores
+    """
+    try:
+        # Verify article exists
+        article = db.get_full_article(article_id)
+        if not article:
+            raise HTTPException(status_code=404, detail="Article not found")
+        
+        # Get keywords for article
+        keywords = db.get_keywords_for_article(article_id)
+        
+        return {
+            "status": "success",
+            "article_id": article_id,
+            "article_heading": article.get('heading'),
+            "keywords": keywords,
+            "keyword_count": len(keywords)
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/keywords/{keyword_name}/articles")
+def get_articles_by_keyword_name(keyword_name: str, limit: int = 10):
+    """
+    Get all articles associated with a specific keyword name.
+    
+    Args:
+        keyword_name: Name of the keyword
+        limit: Maximum number of articles to return (default: 10)
+    
+    Returns:
+        List of articles with this keyword
+    """
+    try:
+        articles = db.get_articles_by_keyword_name(keyword_name, limit=limit)
+        
+        return {
+            "status": "success",
+            "keyword_name": keyword_name,
+            "articles": articles,
+            "article_count": len(articles)
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
     """Get full article by ID."""
     try:
         article = db.get_full_article(article_id)
@@ -268,9 +449,10 @@ def process_article(article_id: int):
     Workflow:
     1. Get article from database
     2. Extract keywords and nucleus summary using HeadingKeywordExtractor
-    3. Add to vector DB for semantic search
-    4. Link keywords to article in database
-    5. Return keywords and summary to frontend
+    3. Update article with AI-generated nucleus summary
+    4. Add to vector DB for semantic search
+    5. Store keywords in article_keywords_list table
+    6. Return keywords and summary to frontend
     """
     try:
         from src.keyword_extractor import HeadingKeywordExtractor
@@ -292,29 +474,22 @@ def process_article(article_id: int):
         keywords = extracted.keywords
         confidence = extracted.confidence_score
         
-        # Step 3: Add to vector DB for semantic search
+        # Step 3: Update article with AI-generated nucleus summary
+        db.update_nucleus_summary(article_id, nucleus_summary)
+        
+        # Step 4: Add to vector DB for semantic search
         vector_store = VectorStore()
         vector_store.add_article(
             article_id=article_id,
             nucleus_summary=nucleus_summary
         )
         
-        # Step 4: Link keywords to article in database
-        keyword_ids = []
-        for keyword_name in keywords:
-            # Insert or get keyword
-            keyword_id = db.insert_or_get_keyword(keyword_name)
-            # Link keyword to article with nucleus summary
-            db.link_article_keyword(
-                article_id=article_id,
-                keyword_id=keyword_id,
-                relevance_score=confidence,
-                nucleus_summary=nucleus_summary
-            )
-            keyword_ids.append(keyword_id)
-        
-        # Step 5: Update article with nucleus summary
-        # (If there's an update method in the DB)
+        # Step 5: Store keywords in article_keywords_list table
+        keyword_ids = db.add_keywords_to_article(
+            article_id=article_id,
+            keywords=keywords,
+            relevance_score=confidence
+        )
         
         return {
             "status": "success",
@@ -323,7 +498,7 @@ def process_article(article_id: int):
             "keywords": keywords,
             "keyword_count": len(keywords),
             "confidence_score": confidence,
-            "message": f"Article processed: {len(keywords)} keywords extracted and indexed"
+            "message": f"Article processed: {len(keywords)} keywords extracted, summary updated, and indexed"
         }
     
     except HTTPException:

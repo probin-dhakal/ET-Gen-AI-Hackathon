@@ -58,20 +58,41 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            # 1. Articles table (stores article content)
+            # 1. Unified Articles table (consolidated with full metadata)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS articles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     heading TEXT NOT NULL,
+                    body TEXT,
                     nucleus_summary TEXT,
+                    author TEXT,
                     source_url TEXT,
+                    source_name VARCHAR(100),
+                    category VARCHAR(50),
                     language VARCHAR(20) DEFAULT 'english',
+                    word_count INTEGER,
+                    image_url TEXT,
                     published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             
-            # 2. Keywords table (unique story arcs)
+            # 2. Article Keywords List table (keywords directly linked to articles)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS article_keywords_list (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    article_id INTEGER NOT NULL,
+                    keyword_name VARCHAR(255) NOT NULL,
+                    relevance_score REAL DEFAULT 1.0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(article_id, keyword_name),
+                    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # 3. Keywords table (unique story arcs - maintained for backward compatibility)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS keywords (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,29 +141,7 @@ class DatabaseManager:
                 )
             """)
             
-            # 5. Full Articles table (complete article data with metadata)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS articles_full (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    article_id INTEGER UNIQUE,
-                    heading TEXT NOT NULL,
-                    body TEXT,
-                    author TEXT,
-                    source_url TEXT,
-                    source_name VARCHAR(100),
-                    category VARCHAR(50),
-                    language VARCHAR(20) DEFAULT 'english',
-                    word_count INTEGER,
-                    image_url TEXT,
-                    published_at TIMESTAMP,
-                    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
-                )
-            """)
-            
-            # 6. Article Translations table (cached translations)
+            # 5. Article Translations table (cached translations)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS article_translations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -157,7 +156,7 @@ class DatabaseManager:
                     translated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(article_id, language),
-                    FOREIGN KEY (article_id) REFERENCES articles_full(article_id) ON DELETE CASCADE
+                    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
                 )
             """)
             
@@ -173,13 +172,13 @@ class DatabaseManager:
             """)
             
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_articles_full_heading
-                ON articles_full(heading)
+                CREATE INDEX IF NOT EXISTS idx_articles_heading
+                ON articles(heading)
             """)
             
             cursor.execute("""
-                CREATE INDEX IF NOT EXISTS idx_articles_full_published
-                ON articles_full(published_at)
+                CREATE INDEX IF NOT EXISTS idx_articles_published
+                ON articles(published_at)
             """)
             
             cursor.execute("""
@@ -209,22 +208,75 @@ class DatabaseManager:
             
             conn.commit()
     
+    def reset_database(self):
+        """
+        Delete all data from all tables while keeping the schema intact.
+        Use this to reset the database without recreating it.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Disable foreign keys temporarily to allow deletion
+            cursor.execute("PRAGMA foreign_keys = OFF")
+            
+            # Delete data from all tables (order matters due to foreign keys)
+            tables = [
+                "article_keywords_list",
+                "article_keywords",
+                "keyword_summaries",
+                "embeddings",
+                "article_translations",
+                "articles",
+                "keywords"
+            ]
+            
+            for table in tables:
+                cursor.execute(f"DELETE FROM {table}")
+            
+            # Re-enable foreign keys
+            cursor.execute("PRAGMA foreign_keys = ON")
+            
+            conn.commit()
+            print(f"✅ Database reset successfully! All tables cleared.")
+    
     def insert_article(
         self,
         heading: str,
-        nucleus_summary: str,
+        body: str = None,
+        nucleus_summary: str = None,
+        author: str = None,
         source_url: str = None,
-        language: str = "english"
+        source_name: str = None,
+        category: str = None,
+        language: str = "english",
+        word_count: int = None,
+        image_url: str = None,
+        published_at: str = None
     ) -> int:
-        """Insert article and return its ID."""
+        """Insert a complete article with all metadata and return its ID."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO articles (heading, nucleus_summary, source_url, language)
-                VALUES (?, ?, ?, ?)
-            """, (heading, nucleus_summary, source_url, language))
+                INSERT INTO articles 
+                (heading, body, nucleus_summary, author, source_url, source_name, 
+                 category, language, word_count, image_url, published_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (heading, body, nucleus_summary, author, source_url, source_name, 
+                  category, language, word_count, image_url, published_at))
             article_id = cursor.lastrowid
             return article_id
+    
+    def update_nucleus_summary(self, article_id: int, nucleus_summary: str) -> bool:
+        """Update the nucleus_summary for an article."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE articles 
+                SET nucleus_summary = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (nucleus_summary, article_id))
+            conn.commit()
+            return cursor.rowcount > 0
     
     def insert_or_get_keyword(self, keyword_name: str) -> int:
         """Insert keyword or return existing ID (UNIQUE constraint)."""
@@ -289,6 +341,91 @@ class DatabaseManager:
                 except sqlite3.IntegrityError:
                     # Summary already exists for this pair, skip
                     pass
+    
+    def add_keywords_to_article(self, article_id: int, keywords: List[str], relevance_score: float = 1.0) -> List[int]:
+        """
+        Add keywords directly to an article using the article_keywords_list table.
+        
+        Args:
+            article_id: ID of the article
+            keywords: List of keyword names
+            relevance_score: Relevance score for all keywords
+        
+        Returns:
+            List of keyword IDs created
+        """
+        keyword_ids = []
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            for keyword_name in keywords:
+                try:
+                    cursor.execute("""
+                        INSERT INTO article_keywords_list (article_id, keyword_name, relevance_score)
+                        VALUES (?, ?, ?)
+                    """, (article_id, keyword_name, relevance_score))
+                    keyword_ids.append(cursor.lastrowid)
+                except sqlite3.IntegrityError:
+                    # Keyword already exists for this article, update relevance score
+                    cursor.execute("""
+                        UPDATE article_keywords_list 
+                        SET relevance_score = ?
+                        WHERE article_id = ? AND keyword_name = ?
+                    """, (relevance_score, article_id, keyword_name))
+            
+            conn.commit()
+        
+        return keyword_ids
+    
+    def get_keywords_for_article(self, article_id: int) -> List[dict]:
+        """
+        Get all keywords for a specific article from article_keywords_list table.
+        
+        Args:
+            article_id: ID of the article
+        
+        Returns:
+            List of dicts with keyword_name and relevance_score
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT id, keyword_name, relevance_score, created_at
+                FROM article_keywords_list
+                WHERE article_id = ?
+                ORDER BY relevance_score DESC
+            """, (article_id,))
+            
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    
+    def get_articles_by_keyword_name(self, keyword_name: str, limit: int = 10) -> List[dict]:
+        """
+        Get all articles associated with a specific keyword name.
+        
+        Args:
+            keyword_name: Name of the keyword
+            limit: Maximum number of results
+        
+        Returns:
+            List of articles with this keyword
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT a.id, a.heading, a.author, a.category, 
+                       a.published_at, akl.relevance_score
+                FROM articles a
+                JOIN article_keywords_list akl ON a.id = akl.article_id
+                WHERE akl.keyword_name = ?
+                ORDER BY a.published_at DESC
+                LIMIT ?
+            """, (keyword_name, limit))
+            
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
     
     def get_keyword_summaries(
         self,
@@ -548,61 +685,13 @@ class DatabaseManager:
     
     # ==================== FULL ARTICLES & TRANSLATIONS ====================
     
-    def insert_full_article(
-        self,
-        heading: str,
-        body: str = None,
-        author: str = None,
-        source_url: str = None,
-        source_name: str = None,
-        category: str = None,
-        language: str = "english",
-        word_count: int = None,
-        image_url: str = None,
-        published_at: str = None,
-        article_id: int = None
-    ) -> int:
-        """
-        Insert a full article with complete metadata.
-        
-        Args:
-            heading: Article title
-            body: Full article body/content
-            author: Author name
-            source_url: URL to original article
-            source_name: News source name
-            category: Article category (e.g., 'business', 'politics')
-            language: Original language
-            word_count: Total word count
-            image_url: Featured image URL
-            published_at: Publication timestamp
-            article_id: Link to articles table (optional)
-        
-        Returns:
-            ID of inserted full article
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                INSERT INTO articles_full 
-                (article_id, heading, body, author, source_url, source_name, 
-                 category, language, word_count, image_url, published_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (article_id, heading, body, author, source_url, source_name, 
-                  category, language, word_count, image_url, published_at))
-            
-            return cursor.lastrowid
     
     def get_full_article(self, article_id: int) -> dict:
-        """Get full article by ID."""
+        """Get full article by ID from the unified articles table."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            cursor.execute("""
-                SELECT * FROM articles_full 
-                WHERE article_id = ? OR id = ?
-            """, (article_id, article_id))
+            cursor.execute("SELECT * FROM articles WHERE id = ?", (article_id,))
             
             row = cursor.fetchone()
             return dict(row) if row else None
@@ -716,9 +805,9 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT id, article_id, heading, author, source_name, 
+                SELECT id, heading, author, source_name, 
                        category, published_at, word_count
-                FROM articles_full
+                FROM articles
                 WHERE heading LIKE ? OR body LIKE ?
                 ORDER BY published_at DESC
                 LIMIT ?
@@ -733,9 +822,9 @@ class DatabaseManager:
             cursor = conn.cursor()
             
             cursor.execute("""
-                SELECT id, article_id, heading, author, source_name,
+                SELECT id, heading, author, source_name,
                        published_at, image_url
-                FROM articles_full
+                FROM articles
                 WHERE category = ?
                 ORDER BY published_at DESC
                 LIMIT ?
@@ -829,25 +918,17 @@ if __name__ == "__main__":
     print("📊 Adding test article...")
     article_id = db.insert_article(
         heading="Union Budget 2026: Tax relief for middle class",
-        nucleus_summary="Government announces significant tax relief for middle class with focus on infrastructure spending.",
-        source_url="https://example.com/budget-2026"
-    )
-    print(f"✅ Article ID: {article_id}\n")
-    
-    print("📄 Adding full article with metadata...")
-    full_article_id = db.insert_full_article(
-        article_id=article_id,
-        heading="Union Budget 2026: Finance Minister announces 5% tax relief",
         body="In a major fiscal stimulus, the government announced significant tax relief targeting the middle class...",
+        nucleus_summary="Government announces significant tax relief for middle class with focus on infrastructure spending.",
         author="Financial Times Bureau",
-        source_name="Financial Times",
         source_url="https://example.com/budget-2026",
+        source_name="Financial Times",
         category="business",
         language="english",
         word_count=450,
         published_at="2026-03-22 10:30:00"
     )
-    print(f"✅ Full Article ID: {full_article_id}\n")
+    print(f"✅ Article ID: {article_id}\n")
     
     print("🌐 Adding translations...")
     languages = ["hindi", "tamil", "telugu"]
@@ -869,7 +950,6 @@ if __name__ == "__main__":
     
     print("\n✅ Database schema with articles and translations ready!")
 
-    
     print("🏷️ Adding keywords...")
     keyword_ids = []
     for keyword in ["Union Budget 2026", "Tax Relief", "Fiscal Policy"]:
