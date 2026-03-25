@@ -2,7 +2,7 @@ import os
 from typing import Optional
 from pydantic import BaseModel, Field
 from langchain.agents import create_agent
-from prompts import get_translation_prompt
+from src.prompts import get_translation_prompt
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_openai import AzureChatOpenAI

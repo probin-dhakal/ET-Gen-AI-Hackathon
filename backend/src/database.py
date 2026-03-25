@@ -765,8 +765,63 @@ class DatabaseManager:
                 "languages": [lang['language'] for lang in languages],
                 "translations": languages
             }
+        
+    def get_keyword_by_article(self, article_id: int) -> dict:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
 
+            # 1️⃣ Get all keyword_ids linked with this article
+            cursor.execute(
+                """
+                SELECT DISTINCT keyword_id
+                FROM keyword_summaries
+                WHERE article_id = ?
+                """,
+                (article_id,)
+            )
 
+            keyword_rows = cursor.fetchall()
+
+            if not keyword_rows:
+                return None
+
+            keyword_ids = [row[0] for row in keyword_rows]
+
+            # 2️⃣ Fetch all related articles with title
+            placeholders = ",".join(["?"] * len(keyword_ids))
+
+            cursor.execute(
+                f"""
+                SELECT ks.article_id, ks.nucleus_summary, ks.created_at, a.heading
+                FROM keyword_summaries ks
+                JOIN articles a ON ks.article_id = a.id
+                WHERE ks.keyword_id IN ({placeholders})
+                ORDER BY ks.created_at DESC
+                """,
+                keyword_ids
+            )
+
+            rows = cursor.fetchall()
+
+            # 3️⃣ Remove duplicate articles
+            articles = []
+            seen = set()
+
+            for r in rows:
+                if r[0] not in seen:
+                    seen.add(r[0])
+                    articles.append({
+                        "article_id": r[0],
+                        "title": r[3],        
+                        "summary": r[1],
+                        "created_at": r[2]
+                    })
+
+            return {
+                "source_article_id": article_id,
+                "related_articles": articles
+            }
+            
 if __name__ == "__main__":
     # Test the database
     db = DatabaseManager()

@@ -18,7 +18,7 @@ db = DatabaseManager()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -437,6 +437,24 @@ def get_all_keywords_with_summaries():
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/articles/{article_id}/keyword")
+def get_keyword_by_article(article_id: int):
+    """
+    Get the keyword that contains the given article_id
+    and return all summaries inside that keyword.
+    """
+
+    try:
+        keyword_data = db.get_keyword_by_article(article_id)
+
+        return {
+            "status": "success",
+            "keyword": keyword_data
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/keywords/trending")
@@ -485,5 +503,70 @@ def get_articles_by_keyword(keyword_id: int, limit: int = 10):
             "count": len(articles)
         }
     
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@app.get("/api/articles/{article_id}/briefing")
+def generate_keyword_briefing(article_id: int):
+    """
+    Generate an AI-powered briefing from all related article summaries
+    belonging to the same keyword cluster.
+    """
+
+    try:
+        from src.search_response_generator import SearchResponseGenerator
+
+        # Step 1: get keyword cluster
+        keyword_data = db.get_keyword_by_article(article_id)
+
+        if not keyword_data:
+            raise HTTPException(status_code=404, detail="Keyword cluster not found")
+
+        related_articles = keyword_data.get("related_articles", [])
+
+        if not related_articles:
+            return {
+                "status": "success",
+                "message": "No related articles found",
+                "briefing": None
+            }
+
+        # Step 2: collect summaries
+        summaries = [
+            article["summary"]
+            for article in related_articles
+            if article.get("summary")
+        ]
+
+        if not summaries:
+            return {
+                "status": "success",
+                "message": "No summaries available for this keyword",
+                "briefing": None
+            }
+
+        # Step 3: combine summaries
+        combined_text = "\n\n".join(summaries)
+
+        # Step 4: generate AI briefing
+        generator = SearchResponseGenerator()
+
+        briefing = generator.generate_response(
+            user_query="Generate a unified intelligence briefing from these news summaries",
+            search_results=[{"body": combined_text}]
+        )
+
+        if hasattr(briefing, "model_dump"):
+            briefing = briefing.model_dump()
+        elif hasattr(briefing, "dict"):
+            briefing = briefing.dict()
+
+        return {
+            "status": "success",
+            "articles_used": len(summaries),
+            "briefing": briefing
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

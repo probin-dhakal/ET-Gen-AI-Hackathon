@@ -5,9 +5,39 @@ export const useArticleStore = create((set, get) => ({
     article_id: null,
     translation: null,
     keywordTimeline: null,
+    briefing: null,
+    loadingBriefing: false,
 
     setArticleId: (id) => {
         set({ article_id: id });
+    },
+
+    // NEW: Fetch AI Briefing
+    getBriefing: async () => {
+        try {
+            const article_id = get().article_id;
+
+            if (!article_id) {
+                console.error("No article_id found");
+                return;
+            }
+
+
+            const res = await axiosInstance.get(
+                `/api/articles/${article_id}/briefing`
+            );
+
+            set({
+                briefing: res.data.briefing,
+                loadingBriefing: false
+            });
+            console.log("Briefing data:", res.data);
+            return res.data;
+
+        } catch (error) {
+            console.error("Briefing error:", error);
+            set({ loadingBriefing: false });
+        }
     },
 
     addArticle: async (article) => {
@@ -26,6 +56,7 @@ export const useArticleStore = create((set, get) => ({
                 image_url: article.urlToImage,
                 published_at: article.publishedAt,
             };
+            set({ article_id: null, keywordTimeline: null, briefing: null,loadingBriefing:true });
 
             const res = await axiosInstance.post("/api/articles/add", payload);
 
@@ -33,11 +64,14 @@ export const useArticleStore = create((set, get) => ({
 
             console.log("Article added with ID:", res.data.article_id);
 
-            set({keywordTimeline: null });
+            set({ keywordTimeline: null });
 
             await get().processarticle(res.data.article_id);
 
             await get().getKeywordTimeline();
+
+            // Optional: auto generate briefing
+            await get().getBriefing();
 
             return res.data;
 
@@ -49,9 +83,7 @@ export const useArticleStore = create((set, get) => ({
     processarticle: async (article_id) => {
         try {
             const res = await axiosInstance.post(`/api/articles/process?article_id=${article_id}`);
-
             return res.data;
-
         } catch (error) {
             console.error("Error processing article:", error);
         }
@@ -59,7 +91,6 @@ export const useArticleStore = create((set, get) => ({
 
     getTranslation: async (language) => {
         try {
-
             const article_id = get().article_id;
 
             if (!article_id) {
@@ -80,7 +111,6 @@ export const useArticleStore = create((set, get) => ({
         }
     },
 
-
     getKeywordTimeline: async () => {
         try {
             const article_id = get().article_id;
@@ -90,7 +120,6 @@ export const useArticleStore = create((set, get) => ({
                 return [];
             }
 
-            // 🔹 Reset timeline immediately so loader appears
             set({ keywordTimeline: null });
 
             const res = await axiosInstance.get(
@@ -104,13 +133,15 @@ export const useArticleStore = create((set, get) => ({
                 return [];
             }
 
-            const events = keywordData.related_articles.map((item) => ({
-                article_id: item.article_id,
-                date: new Date(item.created_at).toLocaleDateString(),
-                title: item.title,
-                subtitle: "Related News",
-                description: item.summary
-            }));
+            const events = keywordData.related_articles
+                .filter(item => article_id !== item.article_id)
+                .map(item => ({
+                    article_id: item.article_id,
+                    date: new Date(item.created_at).toLocaleDateString(),
+                    title: item.title,
+                    subtitle: "Related News",
+                    description: item.summary
+                }));
 
             set({
                 keywordTimeline: events,

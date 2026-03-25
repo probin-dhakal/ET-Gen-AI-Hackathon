@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MessageSquare, PlayCircle, Globe, Activity, FileText, Loader, AlertCircle, Maximize, Loader2 } from 'lucide-react';
 import { useArticleStore } from '../store/useArticle';
 import { Link, useNavigate } from 'react-router-dom';
+import NewsNavigator from './NewsNavigator.jsx';
 
 const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage }) => {
 
@@ -214,29 +215,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
         <div className="col-span-1 md:col-span-4 space-y-8">
 
           {/* Feature 1: News Navigator (Interactive Briefing) */}
-          <div className="bg-gray-50 p-4 border border-gray-200 rounded">
-            <div className="flex items-center space-x-2 mb-3">
-              <MessageSquare size={18} className="text-[#cc0000]" />
-              <h2 className="font-bold text-sm tracking-wider uppercase text-gray-500">News Navigator</h2>
-            </div>
-            <p className="text-sm font-bold mb-2">Interact with this story:</p>
-            <div className="space-y-2 text-sm">
-              <button className="w-full text-left bg-white border border-gray-300 p-2 rounded hover:border-[#cc0000] hover:text-[#cc0000] transition-colors flex items-center">
-                <FileText size={14} className="mr-2" /> Summarize in 3 bullet points
-              </button>
-              <button className="w-full text-left bg-white border border-gray-300 p-2 rounded hover:border-[#cc0000] hover:text-[#cc0000] transition-colors flex items-center">
-                <Activity size={14} className="mr-2" /> How does this impact my portfolio?
-              </button>
-              <div className="mt-3 relative">
-                <input
-                  type="text"
-                  placeholder="Ask a custom follow-up question..."
-                  className="w-full text-xs p-2 border border-gray-300 rounded focus:outline-none focus:border-[#cc0000]"
-                />
-              </div>
-            </div>
-          </div>
-
+          <NewsNavigator/>
           {/* Feature 2: AI Video Studio */}
           <div>
             <div className="flex items-center space-x-2 mb-3">
