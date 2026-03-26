@@ -8,10 +8,8 @@ import {
 } from "remotion";
 
 import logo from "./image.png";
-import male from "./male_anchor.png";
-import female from "./female_anchor.png";
 
-export const MyVideo = ({ scenes, title, audio, durationInFrames, anchor }) => {
+export const MyVideo = ({ scenes, title, audio, durationInFrames }) => {
   const frame = useCurrentFrame();
 
   const sceneDuration = durationInFrames / scenes.length;
@@ -27,9 +25,6 @@ export const MyVideo = ({ scenes, title, audio, durationInFrames, anchor }) => {
   );
 
   const scaleBg = interpolate(localFrame, [0, sceneDuration], [1, 1.15]);
-
-  // ✅ Anchor selection
-  const anchorImage = anchor === "male" ? male : female;
 
   return (
     <AbsoluteFill style={{ color: "#fff", fontFamily: "Arial" }}>
@@ -60,20 +55,7 @@ export const MyVideo = ({ scenes, title, audio, durationInFrames, anchor }) => {
         }}
       />
 
-      {/* 🧑 Anchor (COMPLETELY STABLE) */}
-      <Img
-        src={anchorImage}
-        style={{
-          position: "absolute",
-          bottom: 0,
-          right: 40,
-          height: "80%",
-          objectFit: "contain",
-          opacity: 0.95
-        }}
-      />
-
-      {/* 🎤 Audio Wave Bars (speaking effect stays) */}
+      {/* 🎤 Audio Wave Bars */}
       <div
         style={{
           position: "absolute",

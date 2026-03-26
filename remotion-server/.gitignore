@@ -21,6 +21,7 @@ dist/
 build/
 .cache/
 /public
+/out
 
 # Remotion temp files
 .remotion/

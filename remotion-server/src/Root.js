@@ -14,8 +14,7 @@ export const RemotionRoot = () => {
       scenes: [],
       title: "",
       audio: "audio.mp3",
-      durationInFrames: 300,
-      anchor: "female" // default
+      durationInFrames: 300
     }}
     />
   );
