@@ -165,6 +165,13 @@ const Header = ({ activeLanguage }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (searchQuery.trim() !== '') return;
+    setSearchResults([]);
+    setSearchError('');
+    setShowResults(false);
+  }, [searchQuery]);
+
   return (
     <header>
       {/* Utility Bar */}
