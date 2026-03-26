@@ -1,21 +1,50 @@
 import os
-import time
+import re
+import subprocess
+import json
 from typing import List
 from pydantic import BaseModel
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
-from gtts import gTTS
-from pydub import AudioSegment
 from langchain_openai import AzureChatOpenAI
 import requests
-import os
 
 load_dotenv()
 
-AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
-AudioSegment.ffprobe = "/opt/homebrew/bin/ffprobe"
+# Script → selected language
+# Narration → selected language
+# Voice → selected voice
+# Image → English prompt
+# Audio → correct language
+# Video → synced
 
+
+# ==============================
+# 🎙️ VOICES
+# ==============================
+
+LANGUAGE_VOICES = {
+    "english": "en-IN-NeerjaNeural",
+    "hindi": "hi-IN-SwaraNeural",
+    "bengali": "bn-IN-TanishaaNeural",
+    "assamese": "as-IN-YashicaNeural",
+    "tamil": "ta-IN-PallaviNeural",
+    "telugu": "te-IN-ShrutiNeural"
+}
+
+LANGUAGE_VOICES_MALE = {
+    "english": "en-US-GuyNeural",
+    "hindi": "hi-IN-MadhurNeural",
+    "bengali": "bn-IN-BashkarNeural",
+    "tamil": "ta-IN-ValluvarNeural",
+    "telugu": "te-IN-MohanNeural",
+    "assamese": "as-IN-PriyomNeural"
+}
+
+# ==============================
+# 📦 MODELS
+# ==============================
 
 class Scene(BaseModel):
     text: str
@@ -29,27 +58,33 @@ class VideoScript(BaseModel):
 
 
 # ==============================
+# 🔧 UTILS
+# ==============================
+
+def get_audio_duration(file_path):
+    try:
+        cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "json", file_path
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        data = json.loads(result.stdout)
+        return float(data["format"]["duration"])
+    except:
+        return 0
+
+
+# ==============================
 # 🎬 GENERATOR
 # ==============================
 
 class NewsVideoGenerator:
     def __init__(self):
-        api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        if "AZURE_OPENAI_API_KEY" not in os.environ:
-            print("⚠️ Warning: AZURE_OPENAI_API_KEY not found in environment variables. Please set it in your .env file.")
-            os.environ["AZURE_OPENAI_API_KEY"] = api_key
-        
-        os.environ["AZURE_OPENAI_API_KEY"] = api_key
-        os.environ["AZURE_OPENAI_ENDPOINT"] = os.getenv("AZURE_OPENAI_ENDPOINT")
-
-        # Use Azure OpenAI with LangChain
         model = AzureChatOpenAI(
             azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
             api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-            temperature=0.7,
-            max_tokens=None,
-            timeout=None,
-            max_retries=2
+            temperature=0.7
         )
 
         self.agent = create_agent(
@@ -57,66 +92,84 @@ class NewsVideoGenerator:
             response_format=VideoScript
         )
 
-        # Narration generator (PLAIN TEXT ONLY)
         self.narration_model = init_chat_model("google_genai:gemini-2.5-flash")
 
-
     # ==============================
-    # 🧠 SCENES
+    # 🧠 SCENES (LANGUAGE AWARE)
     # ==============================
 
-    def generate_script(self, article):
-        prompt = f"""
-Create EXACTLY 5 short scenes for a news video.
-
-Rules:
-- Each scene max 10 words
-- Add highlight (2-3 words)
-- Add image_prompt
-- No narration, just visual text
-
-    Article:
-    {article}
-    """
-
+    def generate_script(self, article, language):
         result = self.agent.invoke({
-            "messages": [{"role": "user", "content": prompt}]
-        })
+            "messages": [{
+                "role": "user",
+                "content": f"""
+Create EXACTLY 5 scenes in {language}.
 
-        return result["structured_response"]
-
-
-    # ==============================
-    # 🎙️ NARRATION (DYNAMIC LENGTH)
-    # ==============================
-
-    def generate_narration(self, article):
-        prompt = f"""
-Write a professional news narration.
-
-STRICT:
-- Duration between 50 to 90 seconds
-- Smooth storytelling
-- Start with a greeting (like: Good evening / Welcome)
-- No instructions, no labels
+Each scene:
+- max 8 words
+- match story flow
 
 Article:
 {article}
 """
+            }]
+        })
 
-        result = self.narration_model.invoke(prompt)
+        return result["structured_response"]
 
-        narration = result.content.strip()
+    # ==============================
+    # 🎙️ NARRATION (FIXED LANGUAGE)
+    # ==============================
 
-        # remove any accidental prompt leakage
-        narration = re.sub(r'(Article:.*)', '', narration, flags=re.DOTALL)
+    def generate_narration(self, article, language):
+        result = self.narration_model.invoke(f"""
+    You are a professional TV news anchor.
+
+    Write a COMPLETE news narration in {language}.
+
+    STRICT RULES:
+    - Duration MUST be between 60 to 90 seconds when spoken
+    - Do NOT make it short
+    - Minimum length: ~120 words
+    - Maximum length: ~220 words
+    - Start with a strong intro (e.g., "Today's top story...")
+    - Explain full news clearly
+    - End with a proper closing line (VERY IMPORTANT)
+    - Ensure narration feels COMPLETE (no abrupt ending)
+    - Do NOT include instructions
+    - Do NOT include labels
+
+    Article:
+    {article}
+    """)
+
+        narration = result.content
+
+        # Clean
+        narration = re.sub(r'You are.*', '', narration)
+        narration = re.sub(r'Article:.*', '', narration)
+
+        narration = narration.strip()
+
+        print("📝 Narration length:", len(narration.split()), "words")
 
         return narration
 
+    # ==============================
+    # 🎨 IMAGE PROMPT → ENGLISH
+    # ==============================
 
-    # ==============================
-    # 🎨 IMAGE
-    # ==============================
+    def generate_cinematic_prompt(self, text):
+        try:
+            result = self.narration_model.invoke(f"""
+Convert to a cinematic image prompt in English.
+
+Scene:
+{text}
+""")
+            return result.content.strip()
+        except:
+            return text
 
     def generate_image(self, prompt, index):
         try:
@@ -127,97 +180,120 @@ Article:
                 "Content-Type": "application/json"
             }
 
-            data = {
-                "prompt": f"{prompt}, cinematic lighting, realistic, news style, 16:9"
-            }
-
-            res = requests.post(url, headers=headers, json=data)
-
-            if res.status_code != 200:
-                print("CF error:", res.text)
-                return "fallback.jpg"
+            res = requests.post(url, headers=headers, json={
+                "prompt": f"{prompt}, cinematic lighting, ultra realistic, 16:9"
+            })
 
             os.makedirs("../remotion-server/public", exist_ok=True)
 
-            file_path = f"../remotion-server/public/image_{index}.png"
+            path = f"../remotion-server/public/image_{index}.png"
 
-            with open(file_path, "wb") as f:
+            with open(path, "wb") as f:
                 f.write(res.content)
 
             return f"image_{index}.png"
 
-        except Exception as e:
-            print("Image error:", e)
+        except:
             return "fallback.jpg"
 
+    # ==============================
+    # 🎙️ VOICE SELECT
+    # ==============================
+
+    def select_voice(self, article, language):
+        article = article.lower()
+
+        serious_keywords = [
+            "attack", "blast", "flood", "disaster", "earthquake"
+        ]
+
+        # Assamese → only female
+        if language == "assamese":
+            return LANGUAGE_VOICES["assamese"], "female"
+
+        if any(k in article for k in serious_keywords):
+            return LANGUAGE_VOICES_MALE.get(language, "en-US-GuyNeural"), "male"
+
+        return LANGUAGE_VOICES.get(language, "en-IN-NeerjaNeural"), "female"
 
     # ==============================
-    # 🎧 AUDIO (AZURE)
+    # 🎧 AUDIO
     # ==============================
 
-    def generate_audio(self, narration):
+    def generate_audio(self, narration, article, language):
+        import azure.cognitiveservices.speech as speechsdk
+
+        voice, gender = self.select_voice(article, language)
+
         speech_config = speechsdk.SpeechConfig(
             subscription=os.getenv("AZURE_SPEECH_KEY"),
             region=os.getenv("AZURE_SPEECH_REGION")
         )
 
-        speech_config.set_speech_synthesis_output_format(
-            speechsdk.SpeechSynthesisOutputFormat.Audio16Khz128KBitRateMonoMp3
-        )
+        speech_config.speech_synthesis_voice_name = voice
 
-        speech_config.speech_synthesis_voice_name = "en-IN-NeerjaNeural"
-
-        output = "../remotion-server/public/audio.mp3"
+        path = "../remotion-server/public/audio.mp3"
         os.makedirs("../remotion-server/public", exist_ok=True)
 
-        tts = gTTS(text)
-        tts.save(path)
+        audio_config = speechsdk.audio.AudioOutputConfig(filename=path)
 
-        audio = AudioSegment.from_mp3(path)
-        duration = len(audio) / 1000
+        synthesizer = speechsdk.SpeechSynthesizer(
+            speech_config=speech_config,
+            audio_config=audio_config
+        )
 
-        # ✅ enforce 50–90 sec
-        if duration < 50:
-            narration += " Thank you for watching."
-            return self.generate_audio(narration)
+        result = synthesizer.speak_text_async(narration).get()
+
+        if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:
+            raise Exception("Azure TTS failed")
+
+        duration = get_audio_duration(path)
+
+        print("⏱ Duration:", duration)
+
+        # 🔥 CONTROL RANGE PROPERLY
+        if duration < 60:
+            print("🔁 Too short → expanding narration")
+
+            narration += f" This is the latest update on this story. Stay tuned for more developments."
+
+            return self.generate_audio(narration, article, language)
 
         if duration > 90:
+            print("🔁 Too long → regenerating shorter narration")
+
             narration = " ".join(narration.split()[:180])
-            return self.generate_audio(narration)
+
+            return self.generate_audio(narration, article, language)
+
+        print("🎙️ Voice:", voice)
 
         return "audio.mp3", duration
 
-    def send_to_remotion(self, payload):
-        res = requests.post("http://localhost:3001/render", json=payload)
-
-        if res.status_code != 200:
-            print(res.text)
-            raise Exception("Remotion failed")
-
-        return res.json()
-
+    # ==============================
     # 🎬 MAIN
     # ==============================
 
-    def generate_video(self, article, title):
-        script = self.generate_script(article)
+    def generate_video(self, article, title, language="english"):
+        script = self.generate_script(article, language)
 
-        narration = self.generate_narration(article)
-        audio_file, duration = self.generate_audio(narration)
+        narration = self.generate_narration(article, language)
 
-        scenes = []
+        audio_file, duration = self.generate_audio(narration, article, language)
 
-        # 🎯 INTRO SCENE
-        if narration.lower().startswith(("good", "welcome")):
-            scenes.append({
-                "text": "Welcome to today's news",
-                "highlight": "Breaking News",
-                "image": "image_0.png"
-            })
+        scenes = [{
+            "text": "Today's Top News",
+            "highlight": "Breaking",
+            "image": "image_0.png"
+        }]
 
-        # 🎯 MAIN SCENES
+        voice, gender = self.select_voice(article, language)
+
+        anchor = gender  # 🔥 THIS IS CLEAN
+
         for i, s in enumerate(script.scenes[:5]):
-            img = self.generate_image(s.image_prompt, i % 3)
+            prompt = self.generate_cinematic_prompt(s.image_prompt)
+            img = self.generate_image(prompt, i % 3)
 
             scenes.append({
                 "text": s.text,
@@ -225,13 +301,20 @@ Article:
                 "image": img
             })
 
-        frames = int(duration * 30)
-
         payload = {
             "title": title,
             "scenes": scenes,
             "audio": audio_file,
-            "durationInFrames": frames
+            "durationInFrames": int(duration * 30),
+            "anchor": anchor
         }
 
         return self.send_to_remotion(payload)
+
+    def send_to_remotion(self, payload):
+        res = requests.post("http://localhost:3001/render", json=payload)
+
+        if res.status_code != 200:
+            raise Exception(res.text)
+
+        return res.json()

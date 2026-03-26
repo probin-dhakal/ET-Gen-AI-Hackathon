@@ -10,12 +10,13 @@ export const RemotionRoot = () => {
       fps={30}
       width={1280}
       height={720}
-      defaultProps={{
-        scenes: [],
-        title: "",
-        audio: "audio.mp3",
-        durationInFrames: 300
-      }}
+     defaultProps={{
+      scenes: [],
+      title: "",
+      audio: "audio.mp3",
+      durationInFrames: 300,
+      anchor: "female" // default
+    }}
     />
   );
 };
