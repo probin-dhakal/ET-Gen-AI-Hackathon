@@ -5,6 +5,7 @@ import LeftPanel from './components/LeftPanel';
 import CenterPersonalizedFeed from './components/CenterFeed';
 import RightPanel from './components/RightPanel';
 import ArticleDetailView from './components/ArticleDetailView';
+import Footer from './components/Footer';
 import { useArticleStore } from './store/useArticle';
 import Storyarc from './components/Storyarc.jsx';
 
@@ -62,7 +63,7 @@ const HomePage = ({ setActiveLanguage, activeLanguage }) => {
       
       {/* Left Column */}
       <div className="col-span-1 md:col-span-4">
-        <LeftPanel />
+        <LeftPanel onArticleClick={handleArticleClick} />
       </div>
 
       {/* Middle Column */}
@@ -205,6 +206,8 @@ const App = () => {
         />
 
       </Routes>
+
+      <Footer />
 
     </div>
   );

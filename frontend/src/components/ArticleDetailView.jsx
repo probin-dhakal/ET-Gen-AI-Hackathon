@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MessageSquare, PlayCircle, Globe, Activity, FileText, Loader, AlertCircle, Maximize, Loader2 } from 'lucide-react';
 import { useArticleStore } from '../store/useArticle';
 import { Link, useNavigate } from 'react-router-dom';
-import NewsNavigator from './NewsNavigator.jsx';
+import NewsNavigatorModal from './NewsNavigatorModal.jsx';
 
 const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage }) => {
 
@@ -12,7 +12,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
   const [translatedArticle, setTranslatedArticle] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [expandBriefing, setExpandBriefing] = useState(false);
+  const [isNewsNavigatorOpen, setIsNewsNavigatorOpen] = useState(false);
 
 
 
@@ -246,7 +246,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
                   <div
                     key={relatedArticle.article_id}
                     onClick={() => handleRelatedClick(relatedArticle.article_id)}
-                    className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg hover:shadow-lg hover:border-[#cc0000] transition-all cursor-pointer group"
+                    className="p-4 bg-linear-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg hover:shadow-lg hover:border-[#cc0000] transition-all cursor-pointer group"
                   >
                     {/* Article Title */}
                     <h3 className="font-semibold text-base text-gray-900 group-hover:text-[#cc0000] mb-3 line-clamp-2 leading-tight">
@@ -288,23 +288,21 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
         {/* RIGHT COLUMN: AI Native Features (Spans 4 cols) */}
         <div className="col-span-1 md:col-span-4 space-y-8">
 
-          {/* Feature 1: News Navigator (Expandable) */}
-          <div className="bg-gray-50 border border-gray-200 rounded overflow-hidden">
+          {/* Feature 1: AI News Navigator Modal */}
+          <div className="mt-6">
             <button
-              onClick={() => setExpandBriefing(!expandBriefing)}
-              className="w-full p-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+              onClick={() => setIsNewsNavigatorOpen(true)}
+              className="w-full flex items-center justify-between p-4 bg-linear-to-r from-blue-50 to-blue-100 border-2 border-[#cc0000] rounded-lg hover:from-blue-100 hover:to-blue-150 transition-all group cursor-pointer shadow-md"
             >
-              <div className="flex items-center space-x-2">
-                <MessageSquare size={18} className="text-[#cc0000]" />
-                <h2 className="font-bold text-sm tracking-wider uppercase text-gray-600">News Navigator</h2>
+              <div className="flex items-center space-x-3">
+                <MessageSquare size={20} className="text-[#cc0000]" />
+                <div className="text-left">
+                  <h2 className="font-bold text-sm tracking-wider uppercase text-gray-700">AI News Navigator</h2>
+                  <p className="text-xs text-gray-600">Deep dive with AI-powered Q&A</p>
+                </div>
               </div>
-              <span className="text-[#cc0000] font-bold text-lg">{expandBriefing ? '−' : '+'}</span>
+              <span className="text-[#cc0000] font-bold text-xl group-hover:scale-125 transition-transform">→</span>
             </button>
-            {expandBriefing && (
-              <div className="border-t border-gray-200 p-4 bg-white">
-                <NewsNavigator />
-              </div>
-            )}
           </div>
 
           {/* Feature 2: AI Video Studio */}
@@ -418,6 +416,12 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
         </div>
       </div>
+
+      {/* News Navigator Modal */}
+      <NewsNavigatorModal 
+        isOpen={isNewsNavigatorOpen} 
+        onClose={() => setIsNewsNavigatorOpen(false)} 
+      />
     </main>
   );
 };
