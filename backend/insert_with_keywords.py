@@ -11,7 +11,7 @@ from datetime import datetime
 from src.database import DatabaseManager
 from src.keyword_extractor import HeadingKeywordExtractor
 from src.vector_store import VectorStore
-
+from insert_detailed_articles import articles as DETAILED_ARTICLES
 # Import the sample articles from the insert script
 from insert_sample_articles import SAMPLE_ARTICLES
 
@@ -35,9 +35,9 @@ def insert_articles_with_processing():
         inserted_count = 0
         total_keywords = 0
         
-        for i, article in enumerate(SAMPLE_ARTICLES, 1):
+        for i, article in enumerate(DETAILED_ARTICLES, 1):
             print(f"\n{'─' * 80}")
-            print(f" 📝 Article {i}/{len(SAMPLE_ARTICLES)}")
+            print(f" 📝 Article {i}/{len(DETAILED_ARTICLES)}")
             print(f"{'─' * 80}")
             
             # Step 1: Extract keywords and generate nucleus summary
@@ -49,6 +49,7 @@ def insert_articles_with_processing():
             
             nucleus_summary = extracted.nucleus_summary
             keywords = extracted.keywords
+            print(keywords)
             confidence = extracted.confidence_score
             
             print(f"    ✅ Summary generated")
@@ -67,8 +68,8 @@ def insert_articles_with_processing():
                 source_name=article["source_name"],
                 category=article["category"],
                 language=article["language"],
-                word_count=article["word_count"],
-                image_url=article["image_url"],
+                word_count=2000,
+                image_url="https://picsum.photos/200/300",
                 published_at=article["published_at"]
             )
             print(f" ✅ Article inserted (ID: {article_id})")
@@ -85,13 +86,13 @@ def insert_articles_with_processing():
                 print(f"    ⚠️  Vector DB error (non-fatal): {str(e)[:60]}")
             
             # Step 4: Store keywords in article_keywords_list table
-            print(f" Storing keywords...")
-            keyword_ids = db.add_keywords_to_article(
+            print(f" 📌 Storing keywords...")
+            db.add_keywords_to_article(
                 article_id=article_id,
-                keywords=keywords,
+                keywords=keywords,  # Pass entire list, not individual keywords
                 relevance_score=confidence
             )
-            print(f"    ✅ {len(keyword_ids)} keywords stored")
+            print(f"    ✅ {len(keywords)} keywords stored")
         
   
         print(f"\n ✅ All data has been inserted successfully!\n")

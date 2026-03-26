@@ -8,10 +8,11 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
   const navigate = useNavigate();
 
-  const { getTranslation, getKeywordTimeline, getArticleById, keywordTimeline,setArticleId ,article_id } = useArticleStore();
+  const { getTranslation, getKeywordTimeline, getArticleById, keywordTimeline, setArticleId, article_id, relatedArticles, loadingRelated, getRelatedArticles } = useArticleStore();
   const [translatedArticle, setTranslatedArticle] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [expandBriefing, setExpandBriefing] = useState(false);
 
 
 
@@ -56,6 +57,14 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
     }
   };
 
+  // Initialize article_id when component receives new article
+  useEffect(() => {
+    if (article && article.id && !article_id) {
+      setArticleId(article.id);
+      console.log("Set article_id from article prop:", article.id);
+    }
+  }, [article, article_id, setArticleId]);
+
   // useEffect(() => {
   //   const loadTimeline = async () => {
   //     await getKeywordTimeline();
@@ -63,6 +72,14 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
   //   loadTimeline();
   // }, [article_id]);
+
+  // Fetch related articles when article changes
+  useEffect(() => {
+    if (article_id) {
+      console.log("Fetching related articles for article_id:", article_id);
+      getRelatedArticles();
+    }
+  }, [article_id, getRelatedArticles]);
 
   // Fetch translation when language changes
   useEffect(() => {
@@ -141,9 +158,18 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
           <span className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 block">
             {article.source?.name || 'ET Bureau'} • Published Today
           </span>
-          <h1 className="font-serif text-4xl font-bold leading-tight mb-4">
-            {hasTranslatedContent ? translatedArticle.translated_heading : article.title}
-          </h1>
+          
+          {/* Article Heading & Short Description Section */}
+          <div className="mb-6">
+            <h1 className="font-serif text-4xl font-bold leading-tight mb-3 text-gray-900">
+              {hasTranslatedContent ? translatedArticle.translated_heading : article.title}
+            </h1>
+            {shouldShowDescription && (
+              <p className="text-lg text-gray-700 leading-relaxed font-medium border-l-4 border-[#cc0000] pl-4">
+                {cleanDescription}
+              </p>
+            )}
+          </div>
 
           <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-md mb-6 text-indigo-900 text-sm">
             <span className="font-bold block mb-1">Your AI Context:</span>
@@ -210,13 +236,77 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
               </a>
             )}
           </div>
+
+          {/* Related Articles Section */}
+          {(relatedArticles && relatedArticles.length > 0) && (
+            <div className="mt-12 pt-8 border-t-2 border-gray-200">
+              <h2 className="text-2xl font-bold mb-6 text-gray-900">Related Articles</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {relatedArticles.map((relatedArticle) => (
+                  <div
+                    key={relatedArticle.article_id}
+                    onClick={() => handleRelatedClick(relatedArticle.article_id)}
+                    className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg hover:shadow-lg hover:border-[#cc0000] transition-all cursor-pointer group"
+                  >
+                    {/* Article Title */}
+                    <h3 className="font-semibold text-base text-gray-900 group-hover:text-[#cc0000] mb-3 line-clamp-2 leading-tight">
+                      {relatedArticle.title}
+                    </h3>
+
+                    {/* Article Summary */}
+                    <p className="text-sm text-gray-700 mb-4 line-clamp-3 leading-relaxed">
+                      {relatedArticle.summary}
+                    </p>
+
+                    {/* Meta Info */}
+                    <div className="flex items-center justify-between text-xs text-gray-600 pt-3 border-t border-gray-200">
+                      <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full font-medium">
+                        🔗 {relatedArticle.shared_keywords} shared keyword{relatedArticle.shared_keywords !== 1 ? 's' : ''}
+                      </span>
+                      <span className="text-gray-500">
+                        {new Date(relatedArticle.created_at).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {loadingRelated && (
+            <div className="mt-12 pt-8 border-t-2 border-gray-200 flex items-center justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-[#cc0000] mr-2" />
+              <span className="text-gray-600 font-medium">Loading related articles...</span>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: AI Native Features (Spans 4 cols) */}
         <div className="col-span-1 md:col-span-4 space-y-8">
 
-          {/* Feature 1: News Navigator (Interactive Briefing) */}
-          <NewsNavigator/>
+          {/* Feature 1: News Navigator (Expandable) */}
+          <div className="bg-gray-50 border border-gray-200 rounded overflow-hidden">
+            <button
+              onClick={() => setExpandBriefing(!expandBriefing)}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center space-x-2">
+                <MessageSquare size={18} className="text-[#cc0000]" />
+                <h2 className="font-bold text-sm tracking-wider uppercase text-gray-600">News Navigator</h2>
+              </div>
+              <span className="text-[#cc0000] font-bold text-lg">{expandBriefing ? '−' : '+'}</span>
+            </button>
+            {expandBriefing && (
+              <div className="border-t border-gray-200 p-4 bg-white">
+                <NewsNavigator />
+              </div>
+            )}
+          </div>
+
           {/* Feature 2: AI Video Studio */}
           <div>
             <div className="flex items-center space-x-2 mb-3">

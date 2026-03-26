@@ -699,7 +699,7 @@ def get_keyword_by_article(article_id: int):
 
     try:
         keyword_data = db.get_keyword_by_article(article_id)
-
+        print(keyword_data)
         return {
             "status": "success",
             "keyword": keyword_data
@@ -759,11 +759,22 @@ def get_articles_by_keyword(keyword_id: int, limit: int = 10):
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@app.get("/api/articles/{article_id}/briefing")
-def generate_keyword_briefing(article_id: int):
+@app.post("/api/articles/{article_id}/briefing")
+def generate_keyword_briefing(article_id: int, query: Optional[str] = None):
     """
     Generate an AI-powered briefing from all related article summaries
     belonging to the same keyword cluster.
+    
+    Args:
+        article_id: The article ID to generate briefing for
+        query: Optional custom user query to answer (e.g., follow-up questions).
+               If not provided, uses default briefing query.
+    
+    Process:
+    1. Get keyword cluster for the article
+    2. Collect summaries from all related articles
+    3. Combine summaries into context
+    4. Use AI to answer the query based on the summaries
     """
 
     try:
@@ -784,7 +795,7 @@ def generate_keyword_briefing(article_id: int):
                 "briefing": None
             }
 
-        # Step 2: collect summaries
+        # Step 2: collect summaries from related articles
         summaries = [
             article["summary"]
             for article in related_articles
@@ -794,19 +805,35 @@ def generate_keyword_briefing(article_id: int):
         if not summaries:
             return {
                 "status": "success",
-                "message": "No summaries available for this keyword",
+                "message": "No summaries available for this keyword cluster",
                 "briefing": None
             }
 
-        # Step 3: combine summaries
+        # Step 3: combine summaries into comprehensive context
         combined_text = "\n\n".join(summaries)
 
-        # Step 4: generate AI briefing
+        # Step 4: determine the query to use
+        if not query or query.strip() == "":
+            # Use default briefing query
+            user_query = "Generate a unified intelligence briefing from these news summaries in a concise format with key insights and trends."
+        else:
+            # Use user's custom query (follow-up question)
+            user_query = query.strip()
+
+        # Step 5: generate AI response using SearchResponseGenerator
         generator = SearchResponseGenerator()
 
+        # Format search results with better structure
+        search_results = [{
+            "heading": "Related Articles Summary",
+            "body": combined_text,
+            "source": "Multiple related articles",
+            "article_ids": [article["article_id"] for article in related_articles]
+        }]
+
         briefing = generator.generate_response(
-            user_query="Generate a unified intelligence briefing from these news summaries",
-            search_results=[{"body": combined_text}]
+            user_query=user_query,
+            search_results=search_results
         )
 
         if hasattr(briefing, "model_dump"):
@@ -817,8 +844,12 @@ def generate_keyword_briefing(article_id: int):
         return {
             "status": "success",
             "articles_used": len(summaries),
+            "query_used": user_query,
             "briefing": briefing
         }
 
+    except HTTPException as http_e:
+        raise http_e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ Error generating briefing: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Briefing generation failed: {str(e)}")

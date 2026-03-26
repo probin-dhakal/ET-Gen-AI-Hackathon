@@ -873,59 +873,101 @@ class DatabaseManager:
             }
         
     def get_keyword_by_article(self, article_id: int) -> dict:
+        """
+        Get all articles that share keywords with the given article.
+        
+        Workflow:
+        1. Fetch source article's heading and nucleus_summary
+        2. Find all keywords for the current article from article_keywords_list
+        3. Search for all OTHER articles that have those keywords
+        4. Count how many keywords they share (relevance)
+        5. Return source article info + keywords + related articles sorted by relevance
+        
+        Uses the article_keywords_list table (direct keyword storage).
+        """
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # 1️⃣ Get all keyword_ids linked with this article
+            # STEP 0: Fetch source article's heading and description
             cursor.execute(
                 """
-                SELECT DISTINCT keyword_id
-                FROM keyword_summaries
+                SELECT heading, nucleus_summary
+                FROM articles
+                WHERE id = ?
+                """,
+                (article_id,)
+            )
+            
+            source_article = cursor.fetchone()
+            source_heading = source_article[0] if source_article else "Unknown"
+            source_description = source_article[1] if source_article else "No description available"
+
+            # STEP 1: Get all keywords for this article
+            cursor.execute(
+                """
+                SELECT DISTINCT keyword_name
+                FROM article_keywords_list
                 WHERE article_id = ?
+                ORDER BY keyword_name
                 """,
                 (article_id,)
             )
 
             keyword_rows = cursor.fetchall()
 
+            # If no keywords found, return empty related articles
             if not keyword_rows:
-                return None
+                return {
+                    "source_article_id": article_id,
+                    "source_heading": source_heading,
+                    "source_description": source_description,
+                    "related_articles": [],
+                    "keywords_found": 0
+                }
 
-            keyword_ids = [row[0] for row in keyword_rows]
+            keyword_names = [row[0] for row in keyword_rows]
+            keywords_found = len(keyword_names)
 
-            # 2️⃣ Fetch all related articles with title
-            placeholders = ",".join(["?"] * len(keyword_ids))
+            # STEP 2: Build dynamic SQL for IN clause with all keywords
+            placeholders = ",".join(["?"] * len(keyword_names))
 
+            # STEP 3: Find all OTHER articles sharing these keywords
+            # Count how many keywords each article shares (for ranking)
             cursor.execute(
                 f"""
-                SELECT ks.article_id, ks.nucleus_summary, ks.created_at, a.heading
-                FROM keyword_summaries ks
-                JOIN articles a ON ks.article_id = a.id
-                WHERE ks.keyword_id IN ({placeholders})
-                ORDER BY ks.created_at DESC
+                SELECT DISTINCT a.id, a.heading, a.nucleus_summary, a.created_at,
+                       COUNT(akl.keyword_name) as shared_keywords
+                FROM articles a
+                JOIN article_keywords_list akl ON a.id = akl.article_id
+                WHERE akl.keyword_name IN ({placeholders})
+                  AND a.id != ?
+                GROUP BY a.id
+                ORDER BY shared_keywords DESC, a.created_at DESC
                 """,
-                keyword_ids
+                keyword_names + [article_id]
             )
 
             rows = cursor.fetchall()
 
-            # 3️⃣ Remove duplicate articles
+            # STEP 4: Format results for frontend
             articles = []
-            seen = set()
-
             for r in rows:
-                if r[0] not in seen:
-                    seen.add(r[0])
-                    articles.append({
-                        "article_id": r[0],
-                        "title": r[3],        
-                        "summary": r[1],
-                        "created_at": r[2]
-                    })
+                articles.append({
+                    "article_id": r[0],
+                    "title": r[1],
+                    "summary": r[2],
+                    "created_at": r[3],
+                    "shared_keywords": r[4]
+                })
 
             return {
                 "source_article_id": article_id,
-                "related_articles": articles
+                "source_heading": source_heading,
+                "source_description": source_description,
+                "keywords_found": keywords_found,
+                "keywords": keyword_names,
+                "related_articles": articles,
+                "total_related": len(articles)
             }
             
 if __name__ == "__main__":
