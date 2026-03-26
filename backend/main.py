@@ -19,6 +19,30 @@ VECTOR_INDEXING_ENABLED = os.getenv("ENABLE_VECTOR_INDEXING", "false").lower() =
 # Initialize database
 db = DatabaseManager()
 
+# ==============================
+# 👤 USER PERSONAS FOR PERSONALIZATION
+# ==============================
+PERSONAS = {
+    "startup_founder": {
+        "id": "startup_founder",
+        "role": "Startup Founder in Tech",
+        "interests": ["Venture Capital", "SaaS", "Interest Rates", "Competitor acquisitions", "Funding", "Startup ecosystem"],
+        "goal": "Looking for funding and monitoring market runway."
+    },
+    "retail_investor": {
+        "id": "retail_investor",
+        "role": "Retail Mutual Fund Investor",
+        "interests": ["Mid-cap stocks", "Dividend yields", "Government budgets", "Inflation", "Portfolio management", "Market trends"],
+        "goal": "Growing personal wealth safely over 10 years."
+    },
+    "enterprise_executive": {
+        "id": "enterprise_executive",
+        "role": "Enterprise Executive",
+        "interests": ["Digital transformation", "Cloud infrastructure", "B2B partnerships", "Regulatory compliance", "Enterprise AI", "Market consolidation"],
+        "goal": "Drive digital transformation and stay competitive in enterprise market."
+    }
+}
+
 # ✅ CORS (important for React)
 app.add_middleware(
     CORSMiddleware,
@@ -334,6 +358,86 @@ def get_latest_feed_articles(limit: int = 20):
         return {"count": len(articles), "articles": articles}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/feed/personalized/{persona_id}")
+def get_personalized_feed_articles(persona_id: str, limit: int = 6):
+    """
+    Get personalized feed articles based on user persona.
+    
+    Persona-based filtering:
+    - Filters articles by interests/keywords relevant to the selected persona
+    - Returns articles that match the persona's interests
+    
+    Available personas:
+    - startup_founder: Venture Capital, SaaS, Interest Rates, Competitor acquisitions
+    - retail_investor: Mid-cap stocks, Dividend yields, Government budgets, Inflation
+    - enterprise_executive: Digital transformation, Cloud infrastructure, B2B partnerships
+    """
+    try:
+        # Validate persona exists
+        if persona_id not in PERSONAS:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Persona '{persona_id}' not found. Available: {list(PERSONAS.keys())}"
+            )
+        
+        persona = PERSONAS[persona_id]
+        interests = persona.get("interests", [])
+        
+        # Get all latest articles
+        all_articles = db.get_latest_articles(limit=100)
+        
+        # Filter articles based on persona interests
+        personalized_articles = []
+        for article in all_articles:
+            # Check if article heading or keywords match persona interests
+            article_text = (article.get("heading", "") + " " + article.get("nucleus_summary", "")).lower()
+            
+            # Count matching interests
+            matching_interests = sum(
+                1 for interest in interests 
+                if interest.lower() in article_text
+            )
+            
+            if matching_interests > 0:
+                # Add relevance score based on matched interests
+                article["persona_relevance_score"] = matching_interests / len(interests)
+                personalized_articles.append(article)
+        
+        # Sort by relevance and return
+        personalized_articles.sort(key=lambda x: x.get("persona_relevance_score", 0), reverse=True)
+        personalized_articles = personalized_articles[:limit]
+        
+        return {
+            "persona_id": persona_id,
+            "persona_role": persona.get("role"),
+            "persona_goal": persona.get("goal"),
+            "count": len(personalized_articles),
+            "articles": personalized_articles
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/personas")
+def list_all_personas():
+    """Get list of all available personas."""
+    return {
+        "count": len(PERSONAS),
+        "personas": [
+            {
+                "id": persona_id,
+                "role": persona.get("role"),
+                "goal": persona.get("goal"),
+                "interests": persona.get("interests", [])
+            }
+            for persona_id, persona in PERSONAS.items()
+        ]
+    }
+
 
 
 @app.get("/api/articles/search/{query}")
