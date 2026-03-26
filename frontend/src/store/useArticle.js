@@ -6,20 +6,34 @@ export const useArticleStore = create((set, get) => ({
   translation: null,
   keywordTimeline: null,
   briefing: null,
+  briefingArticleId: null,
   loadingBriefing: false,
+  relatedArticleList: [],
+  loadingRelated: false,
 
   setArticleId: (id) => {
     set({ article_id: id });
   },
 
+  setbriefing: (briefing) => {
+    set({ briefing, briefingArticleId: get().article_id });
+  },
+
   // NEW: Fetch AI Briefing
-  getBriefing: async () => {
+  getBriefing: async (forceRefresh = false) => {
     try {
       const article_id = get().article_id;
+      const cachedBriefing = get().briefing;
+      const cachedBriefingArticleId = get().briefingArticleId;
 
       if (!article_id) {
         console.error("No article_id found");
         return;
+      }
+
+      // Avoid duplicate LLM calls for the same article unless forced.
+      if (!forceRefresh && cachedBriefing && cachedBriefingArticleId === article_id) {
+        return { status: "cached", briefing: cachedBriefing };
       }
 
       set({ loadingBriefing: true });
@@ -30,6 +44,7 @@ export const useArticleStore = create((set, get) => ({
 
       set({
         briefing: res.data.briefing,
+        briefingArticleId: article_id,
         loadingBriefing: false,
       });
       console.log("Briefing data:", res.data);
@@ -58,6 +73,7 @@ export const useArticleStore = create((set, get) => ({
         article_id: null,
         keywordTimeline: null,
         briefing: null,
+        briefingArticleId: null,
         loadingBriefing: true,
       });
 
@@ -70,11 +86,6 @@ export const useArticleStore = create((set, get) => ({
       set({ keywordTimeline: null });
 
       await get().processarticle(res.data.article_id);
-
-      await get().getKeywordTimeline();
-
-      // Optional: auto generate briefing
-      await get().getBriefing();
 
       return res.data;
     } catch (error) {
@@ -212,44 +223,56 @@ export const useArticleStore = create((set, get) => ({
   loadingRelated: false,
   keywordData: null,
 
-  getRelatedArticles: async () => {
-    try {
-      const article_id = get().article_id;
+ getRelatedArticles: async () => {
+  try {
+    const article_id = get().article_id;
 
-      if (!article_id) {
-        console.error("No article_id found");
-        return [];
-      }
-
-      set({ loadingRelated: true });
-
-      const res = await axiosInstance.get(
-        `/api/articles/${article_id}/keyword`,
-      );
-
-      const keywordData = res.data?.keyword;
-
-      if (!keywordData || !keywordData.related_articles) {
-        set({ relatedArticles: [], loadingRelated: false, keywordData: null });
-        return [];
-      }
-
-      // Remove the source article and get first 5 related articles
-      const related = keywordData.related_articles
-        .filter((item) => article_id !== item.article_id)
-        .slice(0, 5);
-
-      set({
-        relatedArticles: related,
-        loadingRelated: false,
-        keywordData: keywordData,
-      });
-
-      return related;
-    } catch (error) {
-      console.error("Related articles error:", error);
-      set({ relatedArticles: [], loadingRelated: false, keywordData: null });
+    if (!article_id) {
+      console.error("No article_id found");
       return [];
     }
-  },
+
+    set({ loadingRelated: true });
+
+    const res = await axiosInstance.get(
+      `/api/articles/${article_id}/keyword`
+    );
+
+    const keywordData = res.data?.keyword;
+
+    if (!keywordData || !keywordData.related_articles) {
+      set({
+        relatedArticleList: [],
+        loadingRelated: false
+      });
+      return [];
+    }
+
+    const related = keywordData.related_articles
+      .filter((item) => item.article_id !== article_id)
+      .slice(0, 5)
+      .map((item) => ({
+        article_id: item.article_id,
+        title: item.title,
+        date: item.created_at
+      }));
+
+    set({
+      relatedArticleList: related,
+      loadingRelated: false
+    });
+
+    return related;
+
+  } catch (error) {
+    console.error("Related articles error:", error);
+
+    set({
+      relatedArticleList: [],
+      loadingRelated: false
+    });
+
+    return [];
+  }
+},
 }));

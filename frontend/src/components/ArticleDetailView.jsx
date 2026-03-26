@@ -8,7 +8,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
 
   const navigate = useNavigate();
 
-  const { getTranslation, getKeywordTimeline, getArticleById, keywordTimeline, setArticleId, article_id, relatedArticles, loadingRelated, getRelatedArticles } = useArticleStore();
+  const { getTranslation, relatedArticleList, getArticleById, setArticleId, article_id, relatedArticles, loadingRelated, getRelatedArticles } = useArticleStore();
   const [translatedArticle, setTranslatedArticle] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -158,7 +158,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
           <span className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 block">
             {article.source?.name || 'ET Bureau'} • Published Today
           </span>
-          
+
           {/* Article Heading & Short Description Section */}
           <div className="mb-6">
             <h1 className="font-serif text-4xl font-bold leading-tight mb-3 text-gray-900">
@@ -264,8 +264,8 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
                         🔗 {relatedArticle.shared_keywords} shared keyword{relatedArticle.shared_keywords !== 1 ? 's' : ''}
                       </span>
                       <span className="text-gray-500">
-                        {new Date(relatedArticle.created_at).toLocaleDateString('en-US', { 
-                          month: 'short', 
+                        {new Date(relatedArticle.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
                           day: 'numeric',
                           year: 'numeric'
                         })}
@@ -365,19 +365,17 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
               Related Articles
             </h2>
 
-            {/* Loading */}
-            {keywordTimeline === null && (
+            {loadingRelated && (
               <div className="flex items-center space-x-2 text-gray-500">
                 <Loader2 className="w-4 h-4 animate-spin text-[#cc0000]" />
                 <p className="text-xs">Loading related articles...</p>
               </div>
             )}
 
-            {/* Data */}
-            {keywordTimeline && keywordTimeline.length > 0 && (
+            {relatedArticleList && relatedArticleList.length > 0 && (
               <div className="max-h-48 overflow-y-auto pr-1">
                 <ul className="space-y-3">
-                  {keywordTimeline.slice(0, 10).map((item, index) => (
+                  {relatedArticleList.slice(0, 10).map((item, index) => (
                     <li
                       key={index}
                       onClick={() => handleRelatedClick(item.article_id)}
@@ -392,7 +390,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
             )}
 
             {/* Empty */}
-            {keywordTimeline && keywordTimeline.length === 0 && (
+            {relatedArticleList && relatedArticleList.length === 0 && (
               <p className="text-xs text-gray-500">No related articles found.</p>
             )}
           </div>

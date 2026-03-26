@@ -9,6 +9,7 @@ from src.database import DatabaseManager
 from fastapi.staticfiles import StaticFiles
 import json
 import os
+import re
 
 app = FastAPI()
 
@@ -777,6 +778,28 @@ def generate_keyword_briefing(article_id: int, query: Optional[str] = None):
     4. Use AI to answer the query based on the summaries
     """
 
+    def _truncate_words(text: str, max_words: int = 18) -> str:
+        words = (text or "").split()
+        if len(words) <= max_words:
+            return (text or "").strip()
+        return " ".join(words[:max_words]).rstrip(".,;:")
+
+    def _to_bullet_lines(text: str, max_items: int = 5) -> list[str]:
+        # Split paragraphs/sentences into short bullet candidates.
+        if not text:
+            return []
+        cleaned = re.sub(r"\s+", " ", text).strip()
+        raw_parts = re.split(r"[\n\r]+|(?<=[.!?])\s+", cleaned)
+        bullets = []
+        for part in raw_parts:
+            line = part.strip(" -•\t")
+            if not line:
+                continue
+            bullets.append(_truncate_words(line, 18))
+            if len(bullets) >= max_items:
+                break
+        return bullets
+
     try:
         from src.search_response_generator import SearchResponseGenerator
 
@@ -815,7 +838,25 @@ def generate_keyword_briefing(article_id: int, query: Optional[str] = None):
         # Step 4: determine the query to use
         if not query or query.strip() == "":
             # Use default briefing query
-            user_query = "Generate a unified intelligence briefing from these news summaries in a concise format with key insights and trends."
+            user_query = """
+Create an intelligence briefing using ONLY bullet points.
+
+Output format:
+- Key Event
+- Major Development
+- Impact / Trend
+- Important Numbers or Facts
+- What Happens Next
+
+Rules:
+- STRICTLY no paragraphs
+- Output ONLY the 5 bullets above, in this exact order
+- Start each line with "• "
+- Maximum 5 bullet points
+- Each bullet ≤ 18 words
+- Total ≤ 100 words
+- No intro/outro text
+"""
         else:
             # Use user's custom query (follow-up question)
             user_query = query.strip()
@@ -840,6 +881,26 @@ def generate_keyword_briefing(article_id: int, query: Optional[str] = None):
             briefing = briefing.model_dump()
         elif hasattr(briefing, "dict"):
             briefing = briefing.dict()
+
+        # Enforce bullet-style output even if upstream model returns paragraphs.
+        insights = briefing.get("key_insights", []) if isinstance(briefing, dict) else []
+        normalized_insights = []
+        for item in insights[:5]:
+            if not isinstance(item, str):
+                continue
+            normalized = _truncate_words(item.strip(" -•\t"), 18)
+            if normalized:
+                normalized_insights.append(normalized)
+
+        if len(normalized_insights) < 3:
+            summary_text = ""
+            if isinstance(briefing, dict):
+                summary_text = str(briefing.get("response_summary", "") or "")
+            normalized_insights = _to_bullet_lines(summary_text, max_items=5)
+
+        if isinstance(briefing, dict):
+            briefing["key_insights"] = normalized_insights
+            briefing["response_summary"] = "\n".join([f"• {line}" for line in normalized_insights])
 
         return {
             "status": "success",
