@@ -5,11 +5,17 @@ export const useArticleStore = create((set, get) => ({
   article_id: null,
   translation: null,
   keywordTimeline: null,
+  loadingKeywordTimeline: false,
   briefing: null,
   briefingArticleId: null,
   loadingBriefing: false,
+  storyIntelligence: null,
+  loadingStoryIntelligence: false,
   relatedArticleList: [],
+  relatedArticles: [],
   loadingRelated: false,
+  keywordData: null,
+  keywordDataArticleId: null,
 
   setArticleId: (id) => {
     set({ article_id: id });
@@ -128,49 +134,92 @@ export const useArticleStore = create((set, get) => ({
       throw error;
     }
   },
+getKeywordTimeline: async () => {
+  try {
+    const article_id = get().article_id;
 
-  getKeywordTimeline: async () => {
+    if (!article_id) {
+      console.error("No article_id found");
+      return [];
+    }
+
+    set({ keywordTimeline: null, loadingKeywordTimeline: true });
+
+    const res = await axiosInstance.get(
+      `/api/articles/${article_id}/timeline`,
+    );
+
+    const timelineEvents = res.data?.events;
+
+    if (!timelineEvents || timelineEvents.length === 0) {
+      set({ keywordTimeline: [], loadingKeywordTimeline: false });
+      return [];
+    }
+
+    const events = timelineEvents
+      .map((item, index) => {
+        const sourceIds = Array.isArray(item.source_article_ids) ? item.source_article_ids : [];
+        const mappedType = item.event_type || "narrative";
+
+        return {
+          article_id: sourceIds.length === 1 ? sourceIds[0] : null,
+          date: item.event_date || "",
+          title: item.title || `Story Event ${index + 1}`,
+          subtitle: mappedType.toUpperCase(),
+          description: item.description || "No event description available.",
+          type: mappedType,
+        };
+      })
+      .sort((a, b) => {
+        const left = a.date ? new Date(a.date).getTime() : Number.MAX_SAFE_INTEGER;
+        const right = b.date ? new Date(b.date).getTime() : Number.MAX_SAFE_INTEGER;
+        return left - right;
+      });
+
+    set({
+      keywordTimeline: events,
+      timelineArticleId: article_id,
+      loadingKeywordTimeline: false,
+    });
+
+    return events;
+  } catch (error) {
+    console.error("Keyword timeline error:", error);
+    set({ keywordTimeline: [], loadingKeywordTimeline: false });
+    return [];
+  }
+},
+
+  getStoryIntelligence: async (query = "") => {
     try {
       const article_id = get().article_id;
 
       if (!article_id) {
         console.error("No article_id found");
-        return [];
+        return null;
       }
 
-      set({ keywordTimeline: null });
+      set({ loadingStoryIntelligence: true });
 
+      const params = query && query.trim() ? { params: { query: query.trim() } } : undefined;
       const res = await axiosInstance.get(
-        `/api/articles/${article_id}/keyword`,
+        `/api/articles/${article_id}/story-intelligence`,
+        params,
       );
 
-      const keywordData = res.data?.keyword;
-
-      if (!keywordData || !keywordData.related_articles) {
-        set({ keywordTimeline: [] });
-        return [];
-      }
-
-      const events = keywordData.related_articles
-        .filter((item) => article_id !== item.article_id)
-        .map((item) => ({
-          article_id: item.article_id,
-          date: new Date(item.created_at).toLocaleDateString(),
-          title: item.title,
-          subtitle: "Related News",
-          description: item.summary,
-        }));
-
       set({
-        keywordTimeline: events,
-        timelineArticleId: article_id,
+        storyIntelligence: res.data?.story_intelligence || null,
+        loadingStoryIntelligence: false,
       });
 
-      return events;
+      return res.data;
     } catch (error) {
-      console.error("Keyword timeline error:", error);
-      set({ keywordTimeline: [] });
-      return [];
+      console.error("Story intelligence error:", error);
+      set({
+        storyIntelligence: null,
+        loadingStoryIntelligence: false,
+      });
+      return null;
     }
   },
 
@@ -182,50 +231,17 @@ export const useArticleStore = create((set, get) => ({
       // Step 2: Set article_id in store for use by other methods
       set({ article_id });
 
-      // Step 3: Immediately fetch related articles for this article
-      try {
-        set({ loadingRelated: true });
-        const relatedRes = await axiosInstance.get(
-          `/api/articles/${article_id}/keyword`,
-        );
-
-        const keywordData = relatedRes.data?.keyword;
-        if (keywordData && keywordData.related_articles) {
-          // Filter out current article and limit to 5
-          const related = keywordData.related_articles
-            .filter((item) => article_id !== item.article_id)
-            .slice(0, 5);
-
-          set({
-            relatedArticles: related,
-            loadingRelated: false,
-            keywordData: keywordData,
-          });
-        } else {
-          set({
-            relatedArticles: [],
-            loadingRelated: false,
-            keywordData: null,
-          });
-        }
-      } catch (relatedError) {
-        console.error("Error fetching related articles:", relatedError);
-        set({ relatedArticles: [], loadingRelated: false, keywordData: null });
-      }
-
       return res.data;
     } catch (error) {
       console.error("Error fetching article:", error);
     }
   },
 
-  relatedArticles: [],
-  loadingRelated: false,
-  keywordData: null,
-
  getRelatedArticles: async () => {
   try {
     const article_id = get().article_id;
+    const cachedKeywordData = get().keywordData;
+    const cachedKeywordArticleId = get().keywordDataArticleId;
 
     if (!article_id) {
       console.error("No article_id found");
@@ -234,15 +250,20 @@ export const useArticleStore = create((set, get) => ({
 
     set({ loadingRelated: true });
 
-    const res = await axiosInstance.get(
-      `/api/articles/${article_id}/keyword`
-    );
+    let keywordData = cachedKeywordData;
 
-    const keywordData = res.data?.keyword;
+    if (!keywordData || cachedKeywordArticleId !== article_id) {
+      const res = await axiosInstance.get(
+        `/api/articles/${article_id}/keyword`
+      );
+      keywordData = res.data?.keyword;
+      set({ keywordData: keywordData || null, keywordDataArticleId: article_id });
+    }
 
     if (!keywordData || !keywordData.related_articles) {
       set({
         relatedArticleList: [],
+        relatedArticles: [],
         loadingRelated: false
       });
       return [];
@@ -259,6 +280,7 @@ export const useArticleStore = create((set, get) => ({
 
     set({
       relatedArticleList: related,
+      relatedArticles: related,
       loadingRelated: false
     });
 
@@ -269,6 +291,7 @@ export const useArticleStore = create((set, get) => ({
 
     set({
       relatedArticleList: [],
+      relatedArticles: [],
       loadingRelated: false
     });
 
