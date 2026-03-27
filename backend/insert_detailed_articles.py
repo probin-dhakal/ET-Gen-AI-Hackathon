@@ -228,7 +228,323 @@ Greenwashing risks remain substantial despite evolution of reporting standards a
         "category": "environment",
         "language": "english",
         "published_at": (datetime.now()).isoformat()
+    },
+    {
+        "heading": "AI Learning Assistants Expand in Public Schools as Teachers Redesign Classroom Time",
+        "body": """
+State education departments across multiple regions have begun large-scale pilots of AI learning assistants in government schools, aiming to improve foundational literacy, numeracy, and personalized remediation. Unlike earlier digital classroom programs that relied on static video lessons, the new systems adapt to each student in real time by identifying specific misconceptions and adjusting practice sequences. Early pilot data suggests that students who were two grades behind in mathematics closed learning gaps faster when teachers combined AI-generated worksheets with small-group instruction.
+
+Administrators emphasize that the model is teacher-led rather than AI-led. Teachers receive daily dashboards highlighting which concepts caused the most errors, which students skipped assignments, and which peer groups could be paired for collaborative learning. This has changed the rhythm of classroom time: lecture minutes are reduced, while guided problem-solving and one-on-one intervention periods are increased. Schools report that this structure helps teachers prioritize struggling learners without slowing high-performing students.
+
+However, implementation challenges remain significant. Device availability is uneven, especially in rural clusters where students share tablets and internet quality is inconsistent. Teacher training quality also varies by district, creating differences in outcomes between schools using the same platform. Education experts note that AI systems are only as effective as assessment quality, language localization, and curriculum alignment. If question banks do not reflect regional boards and multilingual classrooms, recommendation accuracy drops.
+
+Policy planners are now drafting standards for responsible AI use in schools, including data minimization, parental consent, and independent audits of recommendation engines. The long-term objective is to build a blended model where AI handles repetitive diagnostics while teachers focus on motivation, conceptual clarity, and social learning. Officials say the next phase will track attendance, retention, and board-exam performance over two academic years before scaling the program nationally.
+        """,
+        "author": "Education Innovation Desk",
+        "source_url": "https://example.com/ai-learning-assistants-schools",
+        "source_name": "ET Bureau",
+        "category": "education",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=1)).isoformat()
+    },
+    {
+        "heading": "Universities Launch Semiconductor and AI Hardware Programs to Match Industry Hiring Demand",
+        "body": """
+Engineering universities are rapidly redesigning curricula to align with rising demand in semiconductor design, embedded systems, and AI hardware optimization. With chip manufacturing and electronics supply chains becoming strategic priorities, institutions have announced new interdisciplinary tracks that combine VLSI fundamentals, firmware engineering, edge AI deployment, and manufacturing process control. Academic leaders say traditional computer science degrees did not offer enough exposure to production-ready hardware workflows.
+
+The revamped programs include industry-mentored capstones where students build practical prototypes such as low-power inference devices, IoT boards for industrial monitoring, and sensor-based automation modules for manufacturing lines. Several institutions are establishing shared fabrication and testing labs in partnership with private firms so students can work with commercial toolchains rather than only simulation software. Faculty members believe this reduces onboarding time for fresh graduates and improves placement quality.
+
+Recruiters have responded positively but continue to highlight gaps in systems thinking and documentation discipline. Companies report that candidates often understand algorithms but struggle with reliability, debugging, and lifecycle constraints in production hardware. To address this, universities are introducing mandatory coursework in verification, safety standards, and cross-functional collaboration between software and hardware teams.
+
+State governments are supporting the transition through grants for lab modernization, faculty training, and internship subsidies. Policymakers view this education-to-employment pipeline as essential for attracting advanced electronics investment and reducing dependency on imported components. Analysts expect these programs to expand into diploma and vocational pathways, creating multiple entry points for students from diverse socioeconomic backgrounds.
+        """,
+        "author": "Higher Education Correspondent",
+        "source_url": "https://example.com/university-semiconductor-ai-programs",
+        "source_name": "ET Bureau",
+        "category": "education",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=2)).isoformat()
+    },
+    {
+        "heading": "EdTech Platforms Shift from Test Prep to Employability Skills in Data and Automation",
+        "body": """
+Major edtech platforms are pivoting from exam-focused content to job-linked learning paths centered on data literacy, automation tools, and applied digital skills. This shift is driven by learner demand for measurable career outcomes and by employers seeking candidates who can contribute to analytics and process digitization from day one. New course bundles increasingly include portfolio projects, mentor reviews, and interview preparation tied to specific entry-level roles.
+
+Program formats are also changing. Instead of long lecture-heavy modules, providers are adopting shorter sprint-based lessons that combine concept videos with guided practice on real datasets and business scenarios. Learners complete practical assignments such as dashboard design, SQL query optimization, workflow automation, and AI-assisted content operations. Completion certificates are now often linked to skill assessments verified by external evaluators.
+
+Corporate partnerships are becoming central to program credibility. Edtech firms are co-designing curricula with mid-sized enterprises and startup ecosystems to ensure tools and case studies reflect current workplace requirements. Employers participating in these partnerships gain access to talent pools filtered by assessment performance rather than only degree labels. This model is particularly valuable for non-metro learners who face fewer traditional placement opportunities.
+
+Despite momentum, affordability and completion remain challenges. Subscription fatigue, weak peer support, and inconsistent internet access still reduce outcomes for many learners. Providers are experimenting with income-linked payment plans and hybrid learning centers to improve retention. Analysts say the next competitive differentiator in edtech will not be content volume, but successful transitions from learning to sustained employment.
+        """,
+        "author": "Future of Work Editor",
+        "source_url": "https://example.com/edtech-employability-data-automation",
+        "source_name": "ET Bureau",
+        "category": "technology",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=3)).isoformat()
+    },
+    {
+        "heading": "Schools Introduce AI Writing Policies as Generative Tools Redefine Homework and Assessment",
+        "body": """
+School boards are introducing formal AI writing and research policies after a sharp rise in student use of generative tools for essays, summaries, and project reports. Rather than blanket bans, many institutions are adopting disclosure-based frameworks where students must specify how AI was used, what prompts were given, and how outputs were validated. Educators say the objective is to teach responsible usage while preserving originality and critical thinking.
+
+Assessment design is evolving in response. Teachers are moving toward in-class drafting, oral defenses, and source-check exercises that evaluate reasoning quality over polished final text. Some schools now separate marks for idea development, evidence selection, and reflection on AI assistance. This allows teachers to identify genuine understanding even when students use digital tools for grammar and structure support.
+
+Teacher training has become a priority because enforcement without clarity creates inconsistent outcomes. Workshops focus on prompt literacy, citation norms for AI-generated suggestions, and methods for detecting over-reliance patterns. Educators also report positive use cases, especially for students who need language scaffolding, translation help, or support in organizing arguments.
+
+Regulators are expected to release broader guidance for age-appropriate AI use, privacy safeguards, and vendor accountability in education technology contracts. Experts argue that the long-term solution is not policing every output, but redesigning pedagogy around higher-order skills that AI cannot easily replicate: judgment, synthesis, and contextual reasoning.
+        """,
+        "author": "Schools and Policy Desk",
+        "source_url": "https://example.com/ai-writing-policies-schools",
+        "source_name": "ET Bureau",
+        "category": "education",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=4)).isoformat()
+    },
+    {
+        "heading": "Rural Classrooms Gain Satellite Internet as States Build Coding and Robotics Access Programs",
+        "body": """
+State-led digital inclusion initiatives are expanding high-speed connectivity to rural schools through satellite and hybrid network models, enabling access to coding labs, virtual science simulations, and teacher development platforms. Education departments say the strategy is designed to reduce the urban-rural technology gap that widened during remote learning years and continued to affect academic performance.
+
+Pilot districts now run shared innovation labs where students rotate through modules in block-based coding, electronics basics, robotics, and computational thinking. These programs are integrated into regular school schedules instead of being treated as extracurricular add-ons. Teachers report that hands-on problem-solving activities improve attendance and confidence, especially among middle-school students who previously viewed technology subjects as inaccessible.
+
+Implementation depends heavily on ecosystem support. Local instructors require continuous training, devices need maintenance budgets, and content must be available in regional languages to ensure comprehension. Several districts are partnering with nonprofit organizations and local engineering colleges to provide mentorship and volunteer teaching support. This blended model helps sustain programs beyond initial hardware deployment.
+
+Education economists note that digital infrastructure in schools produces broader community benefits: shared access centers, adult digital literacy sessions, and exposure to new career pathways for first-generation learners. Officials plan to track learning outcomes, board exam transitions into STEM streams, and vocational placement rates to evaluate long-term impact before wider rollout.
+        """,
+        "author": "Regional Education Reporter",
+        "source_url": "https://example.com/rural-schools-satellite-coding-labs",
+        "source_name": "ET Bureau",
+        "category": "education",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=5)).isoformat()
+    },
+    {
+        "heading": "Iran-Israel Confrontation Enters New Phase as Precision Strikes and Air Defense Readiness Dominate Strategy",
+        "body": """
+Regional security analysts say the Iran-Israel confrontation has shifted into a phase where calibrated signaling, precision strikes, and layered air defense readiness are central to decision-making. Rather than continuous high-intensity exchange, both sides appear focused on selective operations designed to alter deterrence calculations without triggering uncontrolled escalation.
+
+Military planners are paying close attention to interception rates, response time, and strike attribution. The technical contest now includes missile trajectories, drone swarm management, and electronic interference resilience. This has pushed neighboring states to strengthen surveillance coverage and revise civil defense protocols.
+
+Diplomatic channels remain active through intermediary states even during periods of heightened rhetoric. Observers note that crisis management depends on whether unofficial communication lines can transmit intentions quickly enough to prevent misinterpretation after a high-impact incident.
+
+Energy and shipping markets continue to react to headline risk, with traders pricing in conflict probability spikes whenever strategic facilities or command sites are reported as targets.
+        """,
+        "author": "Middle East Security Desk",
+        "source_url": "https://example.com/iran-israel-deterrence-phase",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=1)).isoformat()
+    },
+    {
+        "heading": "Strait of Hormuz Risk Premium Climbs as Tanker Operators Prepare Contingency Routing Plans",
+        "body": """
+Shipping and energy markets are factoring in renewed Strait of Hormuz disruption risk, with charter desks and tanker operators updating contingency plans for delays, convoy windows, and rerouting triggers. The waterway carries a large share of globally traded crude and LNG-linked flows, making even temporary uncertainty immediately visible in freight and insurance pricing.
+
+Fleet managers report tighter voyage planning, including revised bunkering strategy, satellite tracking procedures, and emergency communications drills. Insurers have responded with selective premium adjustments tied to route exposure and escort availability.
+
+Commodity analysts warn that volatility in Hormuz can transmit quickly across refining margins, petrochemical contracts, and import bills for energy-dependent economies. Countries with limited strategic reserves face higher short-term vulnerability to shipment disruption.
+
+Policymakers are reviewing maritime coordination options with partner navies and regional port authorities to preserve commercial confidence and reduce panic rerouting.
+        """,
+        "author": "Energy Markets Editor",
+        "source_url": "https://example.com/strait-of-hormuz-tanker-risk",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=2)).isoformat()
+    },
+    {
+        "heading": "US Naval Posture in the Gulf Expands Surveillance and Escort Missions Amid Escalation Fears",
+        "body": """
+The United States has expanded naval surveillance and escort coordination in Gulf waters as regional tensions involving Iran and Israel continue to affect maritime security assessments. Defense officials describe the posture as deterrence-oriented, focused on protecting commercial traffic and ensuring freedom of navigation.
+
+Operational emphasis includes persistent monitoring of high-risk lanes, quicker incident-response sequencing, and integration with allied maritime commands. Analysts say visibility and communication reliability are as important as force numbers in preventing escalation from isolated maritime incidents.
+
+Regional governments are also balancing domestic political constraints with economic imperatives tied to uninterrupted energy exports. Public messaging from multiple capitals highlights stability, while backchannel communication seeks to reduce confrontation incentives.
+
+Strategic experts caution that force presence can reduce near-term risk but cannot substitute for diplomatic deconfliction frameworks and clear crisis escalation boundaries.
+        """,
+        "author": "Defense and Diplomacy Correspondent",
+        "source_url": "https://example.com/us-gulf-naval-posture",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=3)).isoformat()
+    },
+    {
+        "heading": "Iran Oil Export Flows Face New Pressure as Sanctions Enforcement and Conflict Risk Intersect",
+        "body": """
+Oil market participants say Iran-related supply expectations are being reshaped by the interaction of sanctions enforcement signals and regional conflict risk. Traders are reassessing forward contracts as shipping reliability, payment channels, and compliance scrutiny evolve simultaneously.
+
+Refiners in Asia are closely monitoring freight terms and discount structures linked to risk premiums. Even where physical supply remains available, transaction complexity can increase financing costs and delivery uncertainty.
+
+Macroeconomic analysts note that uncertainty around Iranian barrels can amplify broader crude price swings, especially during periods of already constrained spare capacity. Central banks in import-heavy economies are watching energy pass-through effects on inflation and currency stability.
+
+Policy observers expect compliance and sanctions guidance to remain a moving target if regional security conditions continue to fluctuate.
+        """,
+        "author": "Commodities Policy Desk",
+        "source_url": "https://example.com/iran-oil-sanctions-conflict-risk",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=4)).isoformat()
+    },
+    {
+        "heading": "Proxy Conflict Activity in Iraq and Syria Raises Stakes in Iran-US Security Signaling",
+        "body": """
+Security assessments from Iraq and Syria indicate that proxy-linked activity remains a key variable in Iran-US strategic signaling. Analysts say indirect pressure through regional networks can alter negotiation leverage while preserving plausible deniability in a crowded conflict environment.
+
+US facilities and partner assets in theater have increased defensive readiness, with greater emphasis on early warning and rapid interception in high-risk windows. Regional governments are simultaneously trying to prevent local instability from undermining domestic economic recovery efforts.
+
+Diplomatic observers argue that proxy theater management is now deeply connected to wider Gulf maritime security and Israel-Iran deterrence dynamics. A localized incident can rapidly influence risk perception across multiple fronts.
+
+Policy specialists recommend stronger incident communication protocols among regional stakeholders to reduce escalation triggered by ambiguous or contested attribution.
+        """,
+        "author": "Regional Conflict Analyst",
+        "source_url": "https://example.com/iraq-syria-proxy-signaling",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=5)).isoformat()
+    },
+    {
+        "heading": "Gulf Air Defense Procurement Accelerates as States Track Iran-Israel Missile and Drone Trends",
+        "body": """
+Defense procurement agencies across Gulf states are accelerating purchases of radar integration, interceptor systems, and command-and-control upgrades as they track lessons from recent Iran-Israel exchanges. Procurement priorities now emphasize multi-layer interception and interoperability across mixed vendor platforms.
+
+Military planners say drone saturation and mixed payload threats require both hardware upgrades and software improvements in target classification and response automation. Training cycles are being revised to simulate faster engagement timelines and complex decoy environments.
+
+The procurement wave is also creating fiscal debates about sustainability, lifecycle maintenance, and dependence on external technical support. Governments are evaluating co-production and local maintenance ecosystems to reduce long-term vulnerability.
+
+Security economists expect continued spending momentum if regional tensions remain elevated through the next budget cycle.
+        """,
+        "author": "Defense Technology Desk",
+        "source_url": "https://example.com/gulf-air-defense-procurement",
+        "source_name": "ET Bureau",
+        "category": "technology",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=6)).isoformat()
+    },
+    {
+        "heading": "Hormuz and Bab el-Mandeb Twin Chokepoint Stress Tests Global Energy Logistics Network",
+        "body": """
+Trade researchers warn that simultaneous stress in the Strait of Hormuz and Bab el-Mandeb route system can magnify global shipping disruption beyond the impact of either chokepoint alone. Energy cargoes, container schedules, and insurance capacity all face compounding pressure under multi-route uncertainty.
+
+Vessel operators are increasingly splitting risk with staggered sailing plans and revised contract clauses for delay and rerouting liabilities. Port operators in alternative corridors are preparing for overflow traffic but note infrastructure and berthing constraints.
+
+Importing economies are revisiting strategic reserve policies and diversification plans, including LNG sourcing flexibility and faster inland distribution readiness.
+
+Market strategists say chokepoint resilience is becoming a structural policy issue rather than a short-term trading concern.
+        """,
+        "author": "Global Trade Intelligence Unit",
+        "source_url": "https://example.com/hormuz-bab-el-mandeb-stress-test",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=7)).isoformat()
+    },
+    {
+        "heading": "Oman and Qatar Mediation Tracks Gain Importance as Iran-Israel-US Crisis Management Intensifies",
+        "body": """
+Diplomatic observers say mediation efforts led by Gulf interlocutors, including Oman and Qatar, are becoming increasingly important in managing Iran-Israel-US crisis messaging. These channels are often used to test de-escalation formulas and communicate red-line concerns when official dialogue is politically constrained.
+
+Mediators are reportedly focusing on sequencing mechanisms: incident restraint commitments, maritime safety assurances, and verification steps that can be implemented without public concessions. While progress remains fragile, the existence of active channels lowers immediate miscalculation risk.
+
+Regional capitals are also trying to separate economic continuity from security shocks, particularly in shipping, aviation, and cross-border investment planning.
+
+Analysts caution that mediation success depends on discipline after tactical incidents, when domestic pressures can rapidly harden negotiating positions.
+        """,
+        "author": "Diplomatic Affairs Desk",
+        "source_url": "https://example.com/oman-qatar-mediation-iran-israel-us",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=8)).isoformat()
+    },
+    {
+        "heading": "War-Risk Insurance and Freight Derivatives Surge as Traders Hedge Hormuz Escalation Scenarios",
+        "body": """
+Insurance and derivatives markets tied to maritime freight have seen heightened activity as traders hedge against Strait of Hormuz escalation scenarios. Brokers report increased demand for short-horizon coverage and volatility-linked instruments among shipping firms, refiners, and large commodity houses.
+
+Risk managers say pricing behavior now reflects both physical disruption probability and policy uncertainty around sanctions, naval posture, and regional retaliation patterns. This complexity is increasing hedging costs, especially for firms with concentrated route exposure.
+
+Financial institutions are tightening stress-test assumptions for energy and transport clients, with scenario models incorporating prolonged rerouting and delayed cargo settlements.
+
+Analysts note that sustained hedging demand can itself influence freight expectations, feeding back into broader inflation and industrial input forecasts.
+        """,
+        "author": "Finance and Shipping Correspondent",
+        "source_url": "https://example.com/hormuz-war-risk-hedging",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=9)).isoformat()
+    },
+    {
+        "heading": "Global Oil and LNG Importers Build Emergency Playbooks for Potential Strait of Hormuz Disruption",
+        "body": """
+Energy ministries and large importing utilities are updating emergency playbooks for a potential Strait of Hormuz disruption, including reserve drawdown sequences, demand-management triggers, and alternative cargo procurement procedures. Officials say planning now assumes shorter reaction windows and more frequent market dislocations.
+
+Power-sector operators in Asia and Europe are prioritizing fuel-switch flexibility and terminal throughput optimization to preserve electricity reliability under supply stress. LNG buyers are negotiating optionality clauses and storage access to reduce spot-market dependency.
+
+Macroeconomic planners are coordinating with central banks and fiscal authorities on inflation-containment strategies in case freight and fuel costs spike simultaneously.
+
+Energy-security experts emphasize that preparedness quality, not just reserve volume, determines whether temporary chokepoint shocks turn into broader economic disruptions.
+        """,
+        "author": "Energy Security Bureau",
+        "source_url": "https://example.com/hormuz-emergency-playbooks-oil-lng",
+        "source_name": "ET Bureau",
+        "category": "world",
+        "language": "english",
+        "published_at": (datetime.now() - timedelta(days=10)).isoformat()
     }
 ]
+
+
+def insert_detailed_articles():
+    """Insert all detailed articles into the database."""
+    print("=" * 70)
+    print(" INSERTING DETAILED ARTICLES")
+    print("=" * 70)
+
+    inserted_count = 0
+    skipped_count = 0
+    for index, article in enumerate(articles, 1):
+        with db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id FROM articles WHERE heading = ? LIMIT 1", (article["heading"],))
+            existing = cursor.fetchone()
+
+        if existing:
+            print(f" ⏭️  Article {index}: {article['heading'][:65]}... (already exists, skipped)")
+            skipped_count += 1
+            continue
+
+        article_id = db.insert_article(
+            heading=article["heading"],
+            body=article["body"],
+            nucleus_summary=(article["body"] or "")[:220],
+            author=article.get("author"),
+            source_url=article.get("source_url"),
+            source_name=article.get("source_name"),
+            category=article.get("category", "general"),
+            language=article.get("language", "english"),
+            word_count=len((article["body"] or "").split()),
+            image_url=article.get("image_url"),
+            published_at=article.get("published_at"),
+        )
+
+        print(f" ✅ Article {index}: {article['heading'][:65]}... (ID: {article_id})")
+        inserted_count += 1
+
+    print("\n" + "=" * 70)
+    print(f" ✨ SUCCESS! Inserted {inserted_count} detailed articles")
+    print(f" ⏭️  Skipped {skipped_count} already-existing articles")
+    print("=" * 70)
+
+
+if __name__ == "__main__":
+    insert_detailed_articles()
 
 
