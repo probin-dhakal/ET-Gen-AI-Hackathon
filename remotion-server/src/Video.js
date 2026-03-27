@@ -1,70 +1,134 @@
+import React from 'react';
 import {
   AbsoluteFill,
   Html5Audio,
   staticFile,
   useCurrentFrame,
   Img,
-  interpolate
+  interpolate,
+  useVideoConfig,
+  spring,
 } from "remotion";
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { slide } from "@remotion/transitions/slide";
 
-import logo from "./image.png";
+import logo from "./image.png"; // Your Overlay Logo
+import et_img from "./et.jpeg"; // The intro image
 
-export const MyVideo = ({ scenes, title, audio, durationInFrames }) => {
+const SceneComponent = ({ image, highlight, text, durationInFrames, isStatic = false }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
-  const sceneDuration = durationInFrames / scenes.length;
-  const index = Math.floor(frame / sceneDuration);
-  const scene = scenes[index] || scenes[0];
+  // Smooth Zoom Effect
+  const scale = interpolate(frame, [0, durationInFrames], [1, 1.15]);
 
-  const localFrame = frame % sceneDuration;
-
-  const opacity = interpolate(
-    localFrame,
-    [0, 20, sceneDuration - 20, sceneDuration],
-    [0, 1, 1, 0]
-  );
-
-  const scale = interpolate(localFrame, [0, sceneDuration], [1, 1.15]);
+  // Entrance Animation for Text
+  const springConfig = { stiffness: 100, damping: 12 };
+  const textEntrance = spring({ frame, fps, config: springConfig });
 
   return (
-    <AbsoluteFill style={{ color: "#fff", fontFamily: "Arial" }}>
-
-      {/* Background */}
+    <AbsoluteFill>
       <Img
-        src={staticFile(scene.image)}
+        src={isStatic ? et_img : staticFile(image)}
         style={{
           width: "100%",
           height: "100%",
           objectFit: "cover",
           transform: `scale(${scale})`,
-          filter: "brightness(0.4)"
+          filter: isStatic ? "none" : "brightness(0.5)", 
         }}
       />
-
-      {/* Audio */}
-      <Html5Audio src={staticFile(audio)} />
-
-      {/* Logo */}
-      <Img src={logo} style={{ position: "absolute", top: 20, left: 20, width: 60 }} />
-
-      {/* Content */}
-      <div style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        textAlign: "center",
-        width: "70%",
-        opacity
-      }}>
-        <h1 style={{ fontSize: 50 }}>{title}</h1>
-
-        <div style={{ color: "#f5c518", fontSize: 28 }}>
-          {scene.highlight}
+      
+      {!isStatic && (
+        <div style={{
+          position: "absolute",
+          bottom: 120,
+          left: 80,
+          right: 80,
+          opacity: textEntrance,
+          transform: `translateY(${interpolate(textEntrance, [0, 1], [40, 0])}px)`,
+          color: "white",
+          fontFamily: "Helvetica, Arial, sans-serif"
+        }}>
+          <h2 style={{
+            fontSize: 40,
+            background: "#f5c518",
+            color: "black",
+            display: "inline-block",
+            padding: "5px 15px",
+            margin: 0,
+            textTransform: "uppercase"
+          }}>
+            {highlight}
+          </h2>
+          <p style={{
+            fontSize: 32,
+            fontWeight: "bold",
+            marginTop: 10,
+            textShadow: "2px 2px 10px rgba(0,0,0,0.8)"
+          }}>
+            {text}
+          </p>
         </div>
+      )}
+    </AbsoluteFill>
+  );
+};
 
-        <p style={{ fontSize: 34 }}>{scene.text}</p>
-      </div>
+export const MyVideo = ({ scenes, audio, durationInFrames }) => {
+  const fps = 30;
+  const transitionFrames = 15;
+  
+  // 1. Intro Logic: 2 seconds = 60 frames
+  const introDuration = 60; 
+  
+  // 2. Remaining time for the news scenes
+  const remainingFrames = durationInFrames - introDuration;
+  const newsSceneDuration = Math.floor(remainingFrames / scenes.length);
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: "black" }}>
+      <TransitionSeries>
+        {/* --- INTRO SCENE (2 SECONDS) --- */}
+        <TransitionSeries.Sequence durationInFrames={introDuration + transitionFrames}>
+          <SceneComponent 
+            isStatic={true} 
+            durationInFrames={introDuration} 
+          />
+        </TransitionSeries.Sequence>
+
+        <TransitionSeries.Transition
+          presentation={slide({ direction: "from-right" })}
+          timing={linearTiming({ durationInFrames: transitionFrames })}
+        />
+
+        {/* --- NEWS SCENES --- */}
+        {scenes.map((scene, i) => (
+          <React.Fragment key={i}>
+            <TransitionSeries.Sequence durationInFrames={newsSceneDuration + transitionFrames}>
+              <SceneComponent 
+                image={scene.image} 
+                highlight={scene.highlight} 
+                text={scene.text}
+                durationInFrames={newsSceneDuration} 
+              />
+            </TransitionSeries.Sequence>
+            
+            {/* Only add transition if it's not the last scene */}
+            {i < scenes.length - 1 && (
+              <TransitionSeries.Transition
+                presentation={slide({ direction: "from-right" })}
+                timing={linearTiming({ durationInFrames: transitionFrames })}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </TransitionSeries>
+
+      {/* Persistent Overlay Logo */}
+      <Img src={logo} style={{ position: "absolute", top: 40, left: 40, width: 70 }} />
+
+      <Html5Audio src={staticFile(audio)} />
     </AbsoluteFill>
   );
 };
