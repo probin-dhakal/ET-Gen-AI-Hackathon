@@ -90,12 +90,13 @@ Keep the response concise but informative.`;
             const enhancedQuery = constructEnhancedQuery(userQuestion);
             
             const response = await fetch(
-                `http://localhost:8000/api/articles/${article_id}/briefing?query=${encodeURIComponent(enhancedQuery)}`,
+                `http://localhost:8000/api/articles/${article_id}/briefing`,
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
+                    body: JSON.stringify({ query: enhancedQuery }),
                 }
             );
             

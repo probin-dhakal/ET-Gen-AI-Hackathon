@@ -69,6 +69,7 @@ export const useArticleStore = create((set, get) => ({
 
       const res = await axiosInstance.post(
         `/api/articles/${article_id}/briefing`,
+        {},
       );
 
       set({

@@ -21,28 +21,17 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
     const [followUpQuestion, setFollowUpQuestion] = useState("");
     const [chatMessages, setChatMessages] = useState([]);
     const [loadingFollowUp, setLoadingFollowUp] = useState(false);
-    const [queryMode, setQueryMode] = useState("article"); // "article" or "related"
     const chatEndRef = useRef(null);
 
     const suggestedQuestions = useMemo(() => {
-        if (queryMode === "article") {
-            // Suggestions for article-specific questions
-            const title = currentArticleTitle || "this article";
-            return [
-                `What are the main points in ${title}?`,
-                `Who are the key people mentioned in this article?`,
-                `What's the impact or significance of this?`,
-            ];
-        } else {
-            // Suggestions for topic-related questions
-            const title = keywordData?.source_heading || "this story";
-            return [
-                `What are the most important takeaways from ${title}?`,
-                "How does this impact businesses in the next 6 months?",
-                "What data points should I track next on this topic?",
-            ];
-        }
-    }, [queryMode, currentArticleTitle, keywordData?.source_heading]);
+        // Suggestions for article-specific questions
+        const title = currentArticleTitle || "this article";
+        return [
+            `What are the main points in ${title}?`,
+            `Who are the key people mentioned in this article?`,
+            `What's the impact or significance of this?`,
+        ];
+    }, [currentArticleTitle]);
 
     const normalizeText = (text) =>
         (text || "")
@@ -108,48 +97,22 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
             ]);
             setFollowUpQuestion("");
             
-            let response;
-            
-            if (queryMode === "article") {
-                // Article-specific Q&A mode
-                response = await fetch(
-                    "http://localhost:8000/api/articles/ask-with-context",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            article_title: currentArticleTitle || "Article",
-                            article_description: currentArticleDescription || "",
-                            article_content: currentArticleContent || "",
-                            user_query: userQuestion
-                        })
-                    }
-                );
-            } else {
-                // Related articles Q&A mode (existing)
-                const articleHeading = keywordData?.source_heading || "this story";
-                const enhancedQuery = `Context: This question is about the article titled "${articleHeading}".
-
-User's Question: ${userQuestion}
-
-Please provide a comprehensive answer based on the related articles in this topic cluster. Include:
-1. Direct answer to the user's question
-2. Relevant context from the articles
-3. Any implications or connections to the main article
-Keep the response concise but informative.`;
-                
-                response = await fetch(
-                    `http://localhost:8000/api/articles/${article_id}/briefing?query=${encodeURIComponent(enhancedQuery)}`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    }
-                );
-            }
+            // Article-specific Q&A mode
+            const response = await fetch(
+                "http://localhost:8000/api/articles/ask-with-context",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        article_title: currentArticleTitle || "Article",
+                        article_description: currentArticleDescription || "",
+                        article_content: currentArticleContent || "",
+                        user_query: userQuestion
+                    })
+                }
+            );
             
             if (!response.ok) {
                 const errorData = await response.json();
@@ -158,18 +121,9 @@ Keep the response concise but informative.`;
 
             const data = await response.json();
             
-            let responseSummary = "";
-            let insights = [];
-            
-            if (queryMode === "article") {
-                // Handle article-specific response
-                responseSummary = data.response || "Response generated from article content.";
-                insights = data.insights || [];
-            } else {
-                // Handle related articles response
-                responseSummary = data.briefing?.response_summary || "Response generated from related articles.";
-                insights = data.briefing?.key_insights || [];
-            }
+            // Handle article-specific response
+            const responseSummary = data.response || "Response generated from article content.";
+            const insights = data.insights || [];
             
             if (responseSummary) {
                 setChatMessages((prev) => [
@@ -308,29 +262,7 @@ Keep the response concise but informative.`;
                             </div>
                         )}
 
-                        {/* Query Mode Toggle */}
-                        <div className="mt-8 mb-6 flex gap-2">
-                            <button
-                                onClick={() => setQueryMode("article")}
-                                className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                                    queryMode === "article"
-                                        ? "bg-[#cf1020] text-white"
-                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                            >
-                                Ask About Article
-                            </button>
-                            <button
-                                onClick={() => setQueryMode("related")}
-                                className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-                                    queryMode === "related"
-                                        ? "bg-[#cf1020] text-white"
-                                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
-                            >
-                                Ask About Topic
-                            </button>
-                        </div>
+
 
                         <div className="mt-10">
                             {suggestedQuestions.map((question) => (

@@ -82,6 +82,18 @@ class VideoRequest(BaseModel):
     language: str = "english"
 
 
+class ArticleContextRequest(BaseModel):
+    """Model for asking questions about a specific article."""
+    article_title: str
+    article_description: str
+    article_content: str = ""
+    user_query: str
+
+
+class BriefingRequest(BaseModel):
+    """Model for generating briefing from related articles."""
+    query: Optional[str] = None
+
 
 
 # ✅ Serve audio folder
@@ -869,7 +881,7 @@ def get_articles_by_keyword(keyword_id: int, limit: int = 10):
     
 
 @app.post("/api/articles/{article_id}/briefing")
-def generate_keyword_briefing(article_id: int, query: Optional[str] = None):
+def generate_keyword_briefing(article_id: int, request: BriefingRequest):
     """
     Generate an AI-powered briefing from all related article summaries
     belonging to the same keyword cluster.
@@ -944,7 +956,7 @@ def generate_keyword_briefing(article_id: int, query: Optional[str] = None):
         combined_text = "\n\n".join(summaries)
 
         # Step 4: determine the query to use
-        if not query or query.strip() == "":
+        if not request.query or request.query.strip() == "":
             # Use default briefing query
             user_query = """
 Create an intelligence briefing using ONLY bullet points.
@@ -967,7 +979,7 @@ Rules:
 """
         else:
             # Use user's custom query (follow-up question)
-            user_query = query.strip()
+            user_query = request.query.strip()
 
         # Step 5: generate AI response using SearchResponseGenerator
         generator = SearchResponseGenerator()
@@ -1141,21 +1153,17 @@ def generate_story_intelligence(article_id: int, query: Optional[str] = None):
 
 
 @app.post("/api/articles/ask-with-context")
-def answer_article_question(
-    article_title: str,
-    article_description: str,
-    article_content: str = "",
-    user_query: str = ""
-):
+def answer_article_question(request: ArticleContextRequest):
     """
     Answer user questions specifically about the current article.
     This endpoint focuses responses on a single article's content.
     
     Args:
-        article_title: Title of the current article
-        article_description: Description/summary of the article
-        article_content: Full content of the article (optional)
-        user_query: User's question about this specific article
+        request: ArticleContextRequest containing:
+            - article_title: Title of the current article
+            - article_description: Description/summary of the article
+            - article_content: Full content of the article (optional)
+            - user_query: User's question about this specific article
     
     Returns:
         Response with answer focused on this article's content
@@ -1163,7 +1171,7 @@ def answer_article_question(
     try:
         from src.search_response_generator import SearchResponseGenerator
         
-        if not user_query or not user_query.strip():
+        if not request.user_query or not request.user_query.strip():
             return {
                 "status": "error",
                 "detail": "user_query is required"
@@ -1171,27 +1179,76 @@ def answer_article_question(
         
         # Create a single search result object representing the current article
         article_context = {
-            "heading": article_title,
-            "body": article_content if article_content.strip() else article_description,
+            "heading": request.article_title,
+            "body": request.article_content if request.article_content.strip() else request.article_description,
             "search_score": 1.0,  # High score since it's the main article
             "author": "Source",
             "category": "Current Article"
         }
         
-        # Format the query to focus on this specific article
-        focused_query = f"""Context: The user is asking about a specific article titled "{article_title}".
+        # Format the query to focus on this specific article (independent, self-contained prompt)
+        article_title = request.article_title or "Article"
+        article_summary = request.article_description or "[Article content not provided]"
+        user_question = request.user_query or ""
+        
+        focused_query = f"""You are an intelligent assistant answering questions about a business/finance article.
 
-Article Summary: {article_description}
+ARTICLE INFORMATION:
+Title: {article_title}
+Summary: {article_summary}
 
-User's Question: {user_query}
+USER QUESTION: "{user_question}"
 
-Please provide a comprehensive answer based ONLY on the content of this specific article. Focus your response on:
-1. Direct answer to the question from this article
-2. Specific details, facts, and quotes from the article
-3. How this article relates to the user's question
-4. Any conclusions or implications from this article's content
+---
 
-Keep the response clear and focused on this single article."""
+STEP 1: VALIDATE THE QUESTION
+First, determine if the question is meaningful and relevant to the article:
+
+REJECT with a redirect if the question is:
+✗ Casual greetings ("hello", "how are you", "hi there", etc.)
+✗ Off-topic small talk unrelated to business/finance
+✗ Completely incoherent or spam
+✗ Just asking you to acknowledge presence
+
+Valid questions generally fit these patterns:
+✓ Impact questions: "How will this impact my portfolio/investments/business?"
+✓ Analysis: "What are the business implications?" "What are the risks?"
+✓ Predictions: "What should investors watch for?" "What happens next?"
+✓ Details: "Who are the key players?" "What are the numbers?"
+✓ Connections: "How does this affect [industry/market]?"
+✓ Opportunity: "What opportunities does this create?"
+
+---
+
+STEP 2: RESPOND TO INVALID QUESTIONS
+If the question fails validation, respond:
+"I'm here to help with meaningful business and investment questions about this article. Ask me about portfolio impact, risks/opportunities, key details, or implications instead."
+
+---
+
+STEP 3: ANSWER VALID QUESTIONS
+For legitimate questions, follow these rules:
+
+1. USE ONLY article content—no external knowledge or assumptions
+2. If information is missing from the article, clearly state: "The article doesn't provide this information"
+3. Extract relevant: facts, data points, risks, opportunities, sector impacts, affected entities
+4. Quote or reference specific details from the article
+5. Connect the article's points directly to the user's question
+
+OUTPUT FORMAT:
+• Direct answer: 1-2 sentences answering the question
+• Evidence: 3-4 bullet points with specific details from the article
+• Total: Keep under 150 words, business-focused and precise
+
+---
+
+INSTRUCTIONS:
+- Do NOT make assumptions or speculate beyond the article
+- Do NOT answer with generic information not in the article
+- Be factual, concise, and directly responsive
+- Prioritize accuracy over elaboration
+
+Now process the user's question above following these steps."""
         
         # Generate response using SearchResponseGenerator
         generator = SearchResponseGenerator()
@@ -1208,10 +1265,11 @@ Keep the response clear and focused on this single article."""
         else:
             response_dict = dict(response)
         
+        print(response_dict)
         return {
             "status": "success",
             "response": response_dict.get("response_summary", ""),
-            "insights": response_dict.get("key_insights", []),
+            "insights": "",
             "confidence": response_dict.get("confidence_score", 0.8)
         }
     
