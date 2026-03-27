@@ -3,6 +3,7 @@ import { Loader2, ExternalLink, ChevronDown, TrendingUp, ChevronLeft, ChevronRig
 import { useArticleStore } from '../store/useArticle';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../lib/axiosinstance';
+import { fetchImageFromPexels } from '../lib/imageService';
 
 const RightPanel = () => {
   const navigate = useNavigate();
@@ -22,6 +23,25 @@ const RightPanel = () => {
   // Stocks state
   const [stocks, setStocks] = useState([]);
   const [loadingStocks, setLoadingStocks] = useState(false);
+
+  // Helper function to enrich articles with images from Pexels
+  const enrichArticlesWithImages = async (articles) => {
+    const enriched = articles.map(item => ({
+      article_id: item.id,
+      title: item.heading,
+      description: item.nucleus_summary || (item.body || '').slice(0, 100),
+      urlToImage: '', // Will be fetched from Pexels
+      author: item.author || 'ET Bureau',
+      publishedAt: item.published_at
+    }));
+
+    // Fetch images from Pexels for all articles based on title
+    for (let i = 0; i < enriched.length; i++) {
+      enriched[i].urlToImage = await fetchImageFromPexels(enriched[i].title);
+    }
+
+    return enriched;
+  };
 
   // Fetch all keywords with summaries
   useEffect(() => {
@@ -52,17 +72,10 @@ const RightPanel = () => {
         });
 
         const articles = response.data?.articles || [];
-        const mappedArticles = articles.map((item) => ({
-          article_id: item.id,
-          title: item.heading,
-          description: item.nucleus_summary || (item.body || '').slice(0, 100),
-          urlToImage: item.image_url || '',
-          author: item.author || 'ET Bureau',
-          publishedAt: item.published_at
-        }));
+        const enrichedArticles = await enrichArticlesWithImages(articles);
 
-        setFeaturedArticles(mappedArticles.slice(0, 2));
-        setSlideshowArticles(mappedArticles.slice(2, 6));
+        setFeaturedArticles(enrichedArticles.slice(0, 2));
+        setSlideshowArticles(enrichedArticles.slice(2, 6));
         setLoadingFeatured(false);
       } catch (err) {
         console.error('Error fetching featured content:', err);

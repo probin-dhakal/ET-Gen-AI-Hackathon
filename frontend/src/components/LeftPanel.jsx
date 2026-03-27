@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, Bookmark, Star } from 'lucide-react';
 import axiosInstance from '../lib/axiosinstance';
+import { fetchImageFromPexels } from '../lib/imageService';
 
 const LeftPanel = ({ onArticleClick }) => {
   const [articles, setArticles] = useState([]);
@@ -11,6 +12,30 @@ const LeftPanel = ({ onArticleClick }) => {
   const [mustReadArticles, setMustReadArticles] = useState([]);
   const [loadingMustRead, setLoadingMustRead] = useState(true);
 
+  // Helper function to enrich articles with images from Pexels
+  const enrichArticlesWithImages = async (articles) => {
+    const enriched = articles.map(item => ({
+      article_id: item.id,
+      title: item.heading,
+      description: item.nucleus_summary || (item.body || '').slice(0, 240),
+      content: item.body || '',
+      author: item.author || 'ET Bureau',
+      url: item.source_url || '',
+      urlToImage: '', // Will be fetched from Pexels
+      publishedAt: item.published_at,
+      source: {
+        name: item.source_name || 'ET Bureau'
+      }
+    }));
+
+    // Fetch images from Pexels for all articles based on title
+    for (let i = 0; i < enriched.length; i++) {
+      enriched[i].urlToImage = await fetchImageFromPexels(enriched[i].title);
+    }
+
+    return enriched;
+  };
+
   useEffect(() => {
     const fetchArticlesFromDb = async () => {
       try {
@@ -19,21 +44,9 @@ const LeftPanel = ({ onArticleClick }) => {
         });
 
         const fetchedArticles = response.data?.articles || [];
-        const mappedArticles = fetchedArticles.map((item) => ({
-          article_id: item.id,
-          title: item.heading,
-          description: item.nucleus_summary || (item.body || '').slice(0, 240),
-          content: item.body || '',
-          author: item.author || 'ET Bureau',
-          url: item.source_url || '',
-          urlToImage: item.image_url || '',
-          publishedAt: item.published_at,
-          source: {
-            name: item.source_name || 'ET Bureau'
-          }
-        }));
+        const enrichedArticles = await enrichArticlesWithImages(fetchedArticles);
 
-        setArticles(mappedArticles.slice(0, 3));
+        setArticles(enrichedArticles.slice(0, 3));
         setError(null);
         setIsLoading(false);
       } catch (err) {
@@ -54,21 +67,9 @@ const LeftPanel = ({ onArticleClick }) => {
         });
 
         const fetchedArticles = response.data?.articles || [];
-        const mappedArticles = fetchedArticles.map((item) => ({
-          article_id: item.id,
-          title: item.heading,
-          description: item.nucleus_summary || (item.body || '').slice(0, 240),
-          content: item.body || '',
-          author: item.author || 'ET Bureau',
-          url: item.source_url || '',
-          urlToImage: item.image_url || '',
-          publishedAt: item.published_at,
-          source: {
-            name: item.source_name || 'ET Bureau'
-          }
-        }));
+        const enrichedArticles = await enrichArticlesWithImages(fetchedArticles);
 
-        setBreakingArticles(mappedArticles.slice(0, 2));
+        setBreakingArticles(enrichedArticles.slice(0, 2));
         setLoadingBreaking(false);
       } catch (err) {
         console.error('Error fetching breaking news:', err);
@@ -87,21 +88,9 @@ const LeftPanel = ({ onArticleClick }) => {
         });
 
         const fetchedArticles = response.data?.articles || [];
-        const mappedArticles = fetchedArticles.map((item) => ({
-          article_id: item.id,
-          title: item.heading,
-          description: item.nucleus_summary || (item.body || '').slice(0, 240),
-          content: item.body || '',
-          author: item.author || 'ET Bureau',
-          url: item.source_url || '',
-          urlToImage: item.image_url || '',
-          publishedAt: item.published_at,
-          source: {
-            name: item.source_name || 'ET Bureau'
-          }
-        }));
+        const enrichedArticles = await enrichArticlesWithImages(fetchedArticles);
 
-        setMustReadArticles(mappedArticles.slice(0, 4));
+        setMustReadArticles(enrichedArticles.slice(0, 4));
         setLoadingMustRead(false);
       } catch (err) {
         console.error('Error fetching must read news:', err);

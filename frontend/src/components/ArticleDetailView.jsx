@@ -13,6 +13,7 @@ import {
 import { useArticleStore } from '../store/useArticle';
 import { Link, useNavigate } from 'react-router-dom';
 import NewsNavigatorModal from './NewsNavigatorModal.jsx';
+import { fetchImageFromPexels } from '../lib/imageService';
 
 const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage }) => {
   const navigate = useNavigate();
@@ -33,6 +34,8 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isNewsNavigatorOpen, setIsNewsNavigatorOpen] = useState(false);
+  const [articleImage, setArticleImage] = useState(null);
+  const [loadingImage, setLoadingImage] = useState(true);
 
   // --- 🎥 Video Generation States ---
   const [isVideoLoading, setIsVideoLoading] = useState(false);
@@ -90,11 +93,13 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
       setArticleId(id);
       if (!rawArticle) return;
 
+      const imageUrl = await fetchImageFromPexels(rawArticle.heading);
+
       const mappedArticle = {
         title: rawArticle.heading,
         description: rawArticle.body?.substring(0, 200),
         content: rawArticle.body,
-        urlToImage: rawArticle.image_url,
+        urlToImage: imageUrl,
         publishedAt: rawArticle.published_at,
         source: { name: rawArticle.source_name || "ET Bureau" }
       };
@@ -141,6 +146,26 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
     fetchTranslation();
   }, [activeLanguage, article_id]);
 
+  // Fetch article image from Pexels
+  useEffect(() => {
+    if (!article?.title) return;
+
+    const fetchArticleImage = async () => {
+      setLoadingImage(true);
+      try {
+        const imageUrl = await fetchImageFromPexels(article.title);
+        setArticleImage(imageUrl);
+      } catch (err) {
+        console.error('Error fetching article image:', err);
+        setArticleImage(`/api/placeholder/800/400`);
+      } finally {
+        setLoadingImage(false);
+      }
+    };
+
+    fetchArticleImage();
+  }, [article?.title]);
+
   return (
     <main className="max-w-7xl mx-auto p-4 mt-4">
       {/* Back Button */}
@@ -171,7 +196,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
           </div>
 
           <img 
-            src={article.urlToImage || `/api/placeholder/800/400`} 
+            src={articleImage || `/api/placeholder/800/400`} 
             className="w-full h-auto object-cover rounded mb-6" 
             alt="Hero"
           />
@@ -258,7 +283,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
                   className={`relative w-full h-[200px] flex items-center justify-center ${!isVideoLoading ? 'cursor-pointer' : 'cursor-wait'}`}
                 >
                   <img 
-                    src={article.urlToImage || `/api/placeholder/400/225`} 
+                    src={articleImage || `/api/placeholder/400/225`} 
                     className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-30 transition-opacity" 
                     alt="Thumbnail"
                   />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader, Users, Settings, ChevronRight } from 'lucide-react';
 import axiosInstance from '../lib/axiosinstance';
 import { useArticleStore } from '../store/useArticle';
+import { fetchImageFromPexels } from '../lib/imageService';
 
 const CenterFeed = ({ onArticleClick, onOpenPersonaModal }) => {
     const { selectedCategory, categoryArticles, loadingCategory, categoryError } = useArticleStore();
@@ -24,6 +25,31 @@ const CenterFeed = ({ onArticleClick, onOpenPersonaModal }) => {
   const [topNewsArticles, setTopNewsArticles] = useState([]);
   const [latestNewsArticles, setLatestNewsArticles] = useState([]);
   const [loadingNewsTab, setLoadingNewsTab] = useState(false);
+
+  // Helper function to enrich articles with images from Pexels
+  const enrichArticlesWithImages = async (articles) => {
+    const enriched = articles.map(item => ({
+      article_id: item.id,
+      title: item.heading,
+      description: item.nucleus_summary || (item.body || '').slice(0, 240),
+      content: item.body || '',
+      author: item.author || 'ET Bureau',
+      url: item.source_url || '',
+      urlToImage: '', // Will be fetched from Pexels
+      publishedAt: item.published_at,
+      source: {
+        name: item.source_name || 'ET Bureau'
+      },
+      relevance_score: item.persona_relevance_score
+    }));
+
+    // Fetch images from Pexels for all articles based on title
+    for (let i = 0; i < enriched.length; i++) {
+      enriched[i].urlToImage = await fetchImageFromPexels(enriched[i].title);
+    }
+
+    return enriched;
+  };
 
   // Fetch available personas
   useEffect(() => {
@@ -52,22 +78,9 @@ const CenterFeed = ({ onArticleClick, onOpenPersonaModal }) => {
         });
 
         const personalizedData = response.data?.articles || [];
-        const mappedArticles = personalizedData.map((item) => ({
-          article_id: item.id,
-          title: item.heading,
-          description: item.nucleus_summary || (item.body || '').slice(0, 240),
-          content: item.body || '',
-          author: item.author || 'ET Bureau',
-          url: item.source_url || '',
-          urlToImage: item.image_url || '',
-          publishedAt: item.published_at,
-          source: {
-            name: item.source_name || 'ET Bureau'
-          },
-          relevance_score: item.persona_relevance_score
-        }));
+        const enrichedArticles = await enrichArticlesWithImages(personalizedData);
 
-        setPersonalizedArticles(mappedArticles);
+        setPersonalizedArticles(enrichedArticles);
         setPersonalizedError(null);
       } catch (err) {
         console.error('Error fetching personalized articles:', err);
@@ -92,20 +105,11 @@ const CenterFeed = ({ onArticleClick, onOpenPersonaModal }) => {
           axiosInstance.get('/api/feed/latest', { params: { limit: 8 } })
         ]);
 
-        const mapArticles = (items) => items.map((item) => ({
-          article_id: item.id,
-          title: item.heading,
-          description: item.nucleus_summary || (item.body || '').slice(0, 240),
-          content: item.body || '',
-          author: item.author || 'ET Bureau',
-          url: item.source_url || '',
-          urlToImage: item.image_url || '',
-          publishedAt: item.published_at,
-          source: { name: item.source_name || 'ET Bureau' }
-        }));
+        const topEnriched = await enrichArticlesWithImages(topRes.data?.articles || []);
+        const latestEnriched = await enrichArticlesWithImages(latestRes.data?.articles || []);
 
-        setTopNewsArticles(mapArticles(topRes.data?.articles || []));
-        setLatestNewsArticles(mapArticles(latestRes.data?.articles || []));
+        setTopNewsArticles(topEnriched);
+        setLatestNewsArticles(latestEnriched);
         setLoadingNewsTab(false);
       } catch (err) {
         console.error('Error fetching news tab articles:', err);
