@@ -1018,3 +1018,296 @@ Rules:
     except Exception as e:
         print(f"❌ Error generating briefing: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Briefing generation failed: {str(e)}")
+    
+
+
+
+
+# chinmoy special routes
+
+@app.post("/api/articles/{article_id}/story-intelligence")
+def generate_story_intelligence(article_id: int, query: Optional[str] = None):
+    """
+    Build advanced story intelligence for a keyword cluster around an article.
+
+    Output includes:
+    - sentiment_shifts
+    - contrarian_perspectives
+    - what_to_watch_next
+    """
+
+    def _parse_dt(value: Optional[str]) -> datetime:
+        if not value:
+            return datetime.min
+        text = str(value).strip()
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except Exception:
+            pass
+        try:
+            return datetime.strptime(text, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return datetime.min
+
+    try:
+        from src.search_response_generator import SearchResponseGenerator
+
+        keyword_data = db.get_keyword_by_article(article_id)
+        if not keyword_data:
+            raise HTTPException(status_code=404, detail="Keyword cluster not found")
+
+        source_article_id = keyword_data.get("source_article_id")
+        source_heading = keyword_data.get("source_heading")
+        source_description = keyword_data.get("source_description")
+        related_articles = keyword_data.get("related_articles", [])
+
+        search_results = []
+
+        if source_article_id:
+            search_results.append({
+                "article_id": source_article_id,
+                "heading": source_heading or "Source Article",
+                "body": source_description or "",
+                "search_score": 1.0,
+                "source_url": "",
+                "author": "",
+                "category": "",
+                "published_at": ""
+            })
+
+        for article in related_articles:
+            if not article.get("article_id"):
+                continue
+            search_results.append({
+                "article_id": article.get("article_id"),
+                "heading": article.get("title") or "Related Article",
+                "body": article.get("summary") or "",
+                "search_score": float(article.get("shared_keywords", 0) or 0),
+                "source_url": "",
+                "author": "",
+                "category": "",
+                "published_at": article.get("created_at") or ""
+            })
+
+        if not search_results:
+            return {
+                "status": "success",
+                "article_id": article_id,
+                "message": "No story data available for this cluster",
+                "story_intelligence": None
+            }
+
+        search_results = sorted(
+            search_results,
+            key=lambda item: _parse_dt(item.get("published_at"))
+        )
+
+        user_query = (query or "").strip() or (
+            "Analyze this ongoing business story cluster for sentiment shifts over time, "
+            "contrarian perspectives, and what to watch next predictions."
+        )
+
+        generator = SearchResponseGenerator()
+        intelligence = generator.generate_story_intelligence(
+            user_query=user_query,
+            search_results=search_results
+        )
+
+        if hasattr(intelligence, "model_dump"):
+            intelligence_dict = intelligence.model_dump()
+        elif hasattr(intelligence, "dict"):
+            intelligence_dict = intelligence.dict()
+        else:
+            intelligence_dict = dict(intelligence)
+
+        return {
+            "status": "success",
+            "article_id": article_id,
+            "query_used": user_query,
+            "cluster_articles": len(search_results),
+            "story_intelligence": intelligence_dict
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error generating story intelligence: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Story intelligence generation failed: {str(e)}")
+    
+
+
+@app.get("/api/articles/{article_id}/story-intelligence")
+def get_story_intelligence(article_id: int, query: Optional[str] = None):
+    """
+    Build structured story intelligence for an ongoing article cluster.
+
+    Returns:
+        - sentiment_shifts: chronological sentiment movement with drivers
+        - contrarian_perspectives: non-consensus viewpoints
+        - what_to_watch_next: forward-looking predictions with watch signals
+    """
+    try:
+        from src.search_response_generator import SearchResponseGenerator
+
+        keyword_data = db.get_keyword_by_article(article_id)
+        if not keyword_data:
+            raise HTTPException(status_code=404, detail="Keyword cluster not found")
+
+        related_articles = keyword_data.get("related_articles", [])
+        if not related_articles:
+            return {
+                "status": "success",
+                "message": "No related articles found",
+                "story_intelligence": None
+            }
+
+        source_heading = keyword_data.get("source_heading") or "Source Article"
+        source_description = keyword_data.get("source_description") or ""
+
+        # Include source article context + related summaries for richer temporal synthesis.
+        search_results = [
+            {
+                "id": keyword_data.get("source_article_id", article_id),
+                "heading": source_heading,
+                "body": source_description,
+                "author": "Unknown",
+                "source_url": "cluster-source",
+                "published_at": "",
+                "search_score": 1.0,
+            }
+        ]
+
+        for item in related_articles:
+            if not item.get("summary"):
+                continue
+            search_results.append(
+                {
+                    "id": item.get("article_id"),
+                    "heading": item.get("title", "Related Article"),
+                    "body": item.get("summary", ""),
+                    "author": "Unknown",
+                    "source_url": "cluster-related",
+                    "published_at": item.get("created_at", ""),
+                    "search_score": float(item.get("shared_keywords", 0) or 0),
+                }
+            )
+
+        user_query = query.strip() if query and query.strip() else (
+            "Analyze this ongoing business story: track sentiment shifts over time, surface contrarian "
+            "perspectives, and predict what to watch next."
+        )
+
+        generator = SearchResponseGenerator()
+        intelligence = generator.generate_story_intelligence(
+            user_query=user_query,
+            search_results=search_results,
+        )
+
+        if hasattr(intelligence, "model_dump"):
+            intelligence = intelligence.model_dump()
+        elif hasattr(intelligence, "dict"):
+            intelligence = intelligence.dict()
+
+        return {
+            "status": "success",
+            "article_id": article_id,
+            "query_used": user_query,
+            "story_intelligence": intelligence,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Story intelligence generation failed: {str(e)}")
+
+
+
+@app.get("/api/articles/{article_id}/timeline")
+def get_agentic_timeline_by_article(article_id: int):
+    """
+    Build an agentic, date-sorted timeline for the given article story cluster.
+    This route is separate from /keyword to keep related-article contract unchanged.
+    """
+    try:
+        from src.search_response_generator import SearchResponseGenerator
+
+        keyword_data = db.get_keyword_by_article(article_id)
+        if not keyword_data:
+            raise HTTPException(status_code=404, detail="Keyword cluster not found")
+
+        related_articles = keyword_data.get("related_articles", [])
+
+        source_article = db.get_full_article(article_id)
+        source_ts_raw = None
+        if source_article:
+            source_ts_raw = source_article.get("published_at") or source_article.get("created_at")
+
+        search_results = [
+            {
+                "article_id": article_id,
+                "heading": keyword_data.get("source_heading") or "Source Article",
+                "body": keyword_data.get("source_description") or "",
+                "search_score": 1.0,
+                "source_url": "cluster-source",
+                "author": "Unknown",
+                "category": "story-cluster",
+                "published_at": source_ts_raw or "",
+            }
+        ]
+
+        for item in related_articles:
+            search_results.append(
+                {
+                    "article_id": item.get("article_id"),
+                    "heading": item.get("title") or "Related Article",
+                    "body": item.get("summary") or "",
+                    "search_score": float(item.get("shared_keywords") or 0),
+                    "source_url": "cluster-related",
+                    "author": "Unknown",
+                    "category": "story-cluster",
+                    "published_at": item.get("created_at") or "",
+                }
+            )
+
+        generator = SearchResponseGenerator()
+        timeline_result = generator.generate_agentic_timeline_events(
+            article_heading=keyword_data.get("source_heading") or "Story Cluster",
+            search_results=search_results,
+        )
+
+        if hasattr(timeline_result, "model_dump"):
+            timeline_result = timeline_result.model_dump()
+        elif hasattr(timeline_result, "dict"):
+            timeline_result = timeline_result.dict()
+
+        events = timeline_result.get("events", []) if isinstance(timeline_result, dict) else []
+
+        def _parse_dt(value: Optional[str]):
+            if not value:
+                return None
+            try:
+                return datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except Exception:
+                try:
+                    return datetime.strptime(value, "%Y-%m-%d")
+                except Exception:
+                    try:
+                        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        return None
+
+        events_sorted = sorted(
+            events,
+            key=lambda event: _parse_dt(event.get("event_date")) or datetime.max,
+        )
+
+        return {
+            "status": "success",
+            "article_id": article_id,
+            "story_label": timeline_result.get("story_label") if isinstance(timeline_result, dict) else None,
+            "events": events_sorted,
+            "event_count": len(events_sorted),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
