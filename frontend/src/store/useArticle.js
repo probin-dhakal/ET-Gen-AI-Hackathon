@@ -3,6 +3,9 @@ import axiosInstance from "../lib/axiosinstance.js";
 
 export const useArticleStore = create((set, get) => ({
   article_id: null,
+  currentArticleTitle: null,
+  currentArticleDescription: null,
+  currentArticleContent: null,
   translation: null,
   keywordTimeline: null,
   loadingKeywordTimeline: false,
@@ -23,6 +26,14 @@ export const useArticleStore = create((set, get) => ({
 
   setArticleId: (id) => {
     set({ article_id: id });
+  },
+
+  setCurrentArticle: (title, description, content) => {
+    set({
+      currentArticleTitle: title,
+      currentArticleDescription: description,
+      currentArticleContent: content,
+    });
   },
 
   setSelectedCategory: (category) => {

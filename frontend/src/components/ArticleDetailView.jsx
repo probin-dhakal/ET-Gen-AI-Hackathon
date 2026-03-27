@@ -23,6 +23,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
     relatedArticleList, 
     getArticleById, 
     setArticleId, 
+    setCurrentArticle,
     article_id, 
     relatedArticles, 
     loadingRelated, 
@@ -115,6 +116,17 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
       setArticleId(article.id);
     }
   }, [article, article_id, setArticleId]);
+
+  // Store current article data for NewsNavigatorModal
+  useEffect(() => {
+    if (article?.title) {
+      setCurrentArticle(
+        article.title,
+        article.description || '',
+        article.content || ''
+      );
+    }
+  }, [article, setCurrentArticle]);
 
   useEffect(() => {
     if (article_id) getRelatedArticles();

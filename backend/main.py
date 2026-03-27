@@ -474,7 +474,7 @@ def get_translation(article_id: int, language: str):
     """
     try:
         language = language.lower()
-        
+        print(language)
         # Step 1: Check cache
         cached_translation = db.get_translation(article_id, language)
         if cached_translation:
@@ -486,6 +486,7 @@ def get_translation(article_id: int, language: str):
         
         # Step 2: Get article from database
         article = db.get_full_article(article_id)
+        # print(article)
         if not article:
             raise HTTPException(status_code=404, detail="Article not found")
         
@@ -496,6 +497,7 @@ def get_translation(article_id: int, language: str):
             article_body=article.get('body', ''),
             language=language
         )
+        # print(translated_article)
         
         # Convert to dict for JSON serialization
         if hasattr(translated_article, 'to_dict'):
@@ -563,7 +565,7 @@ def generate_video(request_data: VideoRequest):
 
 
 # ==============================
-# 📊 STATS & HEALTH CHECK
+# STATS & HEALTH CHECK
 # ==============================
 
 @app.get("/api/health")
@@ -1136,6 +1138,89 @@ def generate_story_intelligence(article_id: int, query: Optional[str] = None):
         print(f"❌ Error generating story intelligence: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Story intelligence generation failed: {str(e)}")
     
+
+
+@app.post("/api/articles/ask-with-context")
+def answer_article_question(
+    article_title: str,
+    article_description: str,
+    article_content: str = "",
+    user_query: str = ""
+):
+    """
+    Answer user questions specifically about the current article.
+    This endpoint focuses responses on a single article's content.
+    
+    Args:
+        article_title: Title of the current article
+        article_description: Description/summary of the article
+        article_content: Full content of the article (optional)
+        user_query: User's question about this specific article
+    
+    Returns:
+        Response with answer focused on this article's content
+    """
+    try:
+        from src.search_response_generator import SearchResponseGenerator
+        
+        if not user_query or not user_query.strip():
+            return {
+                "status": "error",
+                "detail": "user_query is required"
+            }
+        
+        # Create a single search result object representing the current article
+        article_context = {
+            "heading": article_title,
+            "body": article_content if article_content.strip() else article_description,
+            "search_score": 1.0,  # High score since it's the main article
+            "author": "Source",
+            "category": "Current Article"
+        }
+        
+        # Format the query to focus on this specific article
+        focused_query = f"""Context: The user is asking about a specific article titled "{article_title}".
+
+Article Summary: {article_description}
+
+User's Question: {user_query}
+
+Please provide a comprehensive answer based ONLY on the content of this specific article. Focus your response on:
+1. Direct answer to the question from this article
+2. Specific details, facts, and quotes from the article
+3. How this article relates to the user's question
+4. Any conclusions or implications from this article's content
+
+Keep the response clear and focused on this single article."""
+        
+        # Generate response using SearchResponseGenerator
+        generator = SearchResponseGenerator()
+        response = generator.generate_response(
+            user_query=focused_query,
+            search_results=[article_context]
+        )
+        
+        # Convert to dict if needed
+        if hasattr(response, "model_dump"):
+            response_dict = response.model_dump()
+        elif hasattr(response, "dict"):
+            response_dict = response.dict()
+        else:
+            response_dict = dict(response)
+        
+        return {
+            "status": "success",
+            "response": response_dict.get("response_summary", ""),
+            "insights": response_dict.get("key_insights", []),
+            "confidence": response_dict.get("confidence_score", 0.8)
+        }
+    
+    except Exception as e:
+        print(f"❌ Error answering article question: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate answer: {str(e)}"
+        )
 
 
 @app.get("/api/articles/{article_id}/story-intelligence")
