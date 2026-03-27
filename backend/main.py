@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -342,7 +342,7 @@ def get_article_by_id(article_id: int):
 
 
 @app.get("/api/articles/latest")
-def get_latest_articles(limit: int = 20):
+def get_latest_articles(limit: int = Query(20, ge=1, le=100)):
     """Get latest articles from local database for feed UI."""
     try:
         articles = db.get_latest_articles(limit=limit)
@@ -543,11 +543,13 @@ def generate_video(request_data: VideoRequest):
         # ✅ safe handling
         language = (request_data.language or "english").lower()
 
+        print(request_data)
         result = generator.generate_video(
             request_data.article,
             request_data.title,
             language
         )
+    
 
         return {
             "status": "success",

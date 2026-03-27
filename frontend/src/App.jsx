@@ -6,6 +6,7 @@ import CenterPersonalizedFeed from './components/CenterFeed';
 import RightPanel from './components/RightPanel';
 import ArticleDetailView from './components/ArticleDetailView';
 import Footer from './components/Footer';
+import PersonaModal from './components/PersonaModal';
 import { useArticleStore } from './store/useArticle';
 import Storyarc from './components/Storyarc.jsx';
 
@@ -14,6 +15,18 @@ const HomePage = ({ setActiveLanguage, activeLanguage }) => {
   const { addArticle, setArticleId, getArticleById } = useArticleStore();
 
   const navigate = useNavigate();
+
+  // Manage persona modal state for first-time visitors
+  const [showPersonaModal, setShowPersonaModal] = useState(false);
+
+  useEffect(() => {
+    // Check if user has seen the persona modal before
+    const hasSeenPersonaModal = localStorage.getItem('hasSeenPersonaModal');
+    if (!hasSeenPersonaModal) {
+      setShowPersonaModal(true);
+      localStorage.setItem('hasSeenPersonaModal', 'true');
+    }
+  }, []);
 
   const handleArticleClick = async (article) => {
     let nextArticle = article;
@@ -59,27 +72,37 @@ const HomePage = ({ setActiveLanguage, activeLanguage }) => {
   };
 
   return (
-    <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 p-4 mt-4">
-      
-      {/* Left Column */}
-      <div className="col-span-1 md:col-span-4">
-        <LeftPanel onArticleClick={handleArticleClick} />
-      </div>
+    <>
+      <PersonaModal 
+        isOpen={showPersonaModal} 
+        onClose={() => setShowPersonaModal(false)}
+        onArticleClick={handleArticleClick}
+      />
+      <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 p-4 mt-4">
+        
+        {/* Left Column */}
+        <div className="col-span-1 md:col-span-4">
+          <LeftPanel onArticleClick={handleArticleClick} />
+        </div>
 
-      {/* Middle Column */}
-      <div className="col-span-1 md:col-span-5">
-        <CenterPersonalizedFeed onArticleClick={handleArticleClick} />
-      </div>
+        {/* Middle Column */}
+        <div className="col-span-1 md:col-span-5">
+          <CenterPersonalizedFeed 
+            onArticleClick={handleArticleClick}
+            onOpenPersonaModal={() => setShowPersonaModal(true)}
+          />
+        </div>
 
-      {/* Right Column */}
-      <div className="col-span-1 md:col-span-3">
-        <RightPanel
-          activeLanguage={activeLanguage}
-          setActiveLanguage={setActiveLanguage}
-        />
-      </div>
+        {/* Right Column */}
+        <div className="col-span-1 md:col-span-3">
+          <RightPanel
+            activeLanguage={activeLanguage}
+            setActiveLanguage={setActiveLanguage}
+          />
+        </div>
 
-    </main>
+      </main>
+    </>
   );
 };
 

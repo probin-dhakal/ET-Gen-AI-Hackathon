@@ -12,19 +12,28 @@ app.use("/videos", express.static(path.join(process.cwd(), "out")));
 app.post("/render", (req, res) => {
   const file = `out/video-${Date.now()}.mp4`;
 
+  // ✅ Validate durationInFrames
+  const durationInFrames = req.body.durationInFrames;
+  if (!durationInFrames || durationInFrames <= 0) {
+    return res.status(400).json({
+      error: `Invalid durationInFrames: ${durationInFrames}. Must be positive. Received payload:`,
+      payload: req.body,
+    });
+  }
+
   execFile(
-  "npx",
-  [
-    "remotion",
-    "render",
-    "src/index.js",
-    "MyVideo",
-    file,
-    "--props",
-    JSON.stringify(req.body),
-    "--duration",
-    `${req.body.durationInFrames}`
-  ],
+    "npx",
+    [
+      "remotion",
+      "render",
+      "src/index.js",
+      "MyVideo",
+      file,
+      "--props",
+      JSON.stringify(req.body),
+      "--duration",
+      `${durationInFrames}`,
+    ],
     (err, stdout, stderr) => {
       console.log(stdout);
       console.log(stderr);
@@ -34,9 +43,9 @@ app.post("/render", (req, res) => {
       }
 
       res.json({
-        videoUrl: `http://localhost:3001/videos/${file.split("/")[1]}`
+        videoUrl: `http://localhost:3001/videos/${file.split("/")[1]}`,
       });
-    }
+    },
   );
 });
 

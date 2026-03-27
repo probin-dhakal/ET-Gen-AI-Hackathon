@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Loader } from 'lucide-react';
+import { Loader, Bookmark, Star } from 'lucide-react';
 import axiosInstance from '../lib/axiosinstance';
 
 const LeftPanel = ({ onArticleClick }) => {
   const [articles, setArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [breakingArticles, setBreakingArticles] = useState([]);
+  const [loadingBreaking, setLoadingBreaking] = useState(true);
+  const [mustReadArticles, setMustReadArticles] = useState([]);
+  const [loadingMustRead, setLoadingMustRead] = useState(true);
 
   useEffect(() => {
     const fetchArticlesFromDb = async () => {
@@ -42,6 +46,72 @@ const LeftPanel = ({ onArticleClick }) => {
     fetchArticlesFromDb();
   }, []);
 
+  useEffect(() => {
+    const fetchBreakingNews = async () => {
+      try {
+        const response = await axiosInstance.get('/api/feed/latest', {
+          params: { limit: 5 }
+        });
+
+        const fetchedArticles = response.data?.articles || [];
+        const mappedArticles = fetchedArticles.map((item) => ({
+          article_id: item.id,
+          title: item.heading,
+          description: item.nucleus_summary || (item.body || '').slice(0, 240),
+          content: item.body || '',
+          author: item.author || 'ET Bureau',
+          url: item.source_url || '',
+          urlToImage: item.image_url || '',
+          publishedAt: item.published_at,
+          source: {
+            name: item.source_name || 'ET Bureau'
+          }
+        }));
+
+        setBreakingArticles(mappedArticles.slice(0, 2));
+        setLoadingBreaking(false);
+      } catch (err) {
+        console.error('Error fetching breaking news:', err);
+        setLoadingBreaking(false);
+      }
+    };
+
+    fetchBreakingNews();
+  }, []);
+
+  useEffect(() => {
+    const fetchMustReadNews = async () => {
+      try {
+        const response = await axiosInstance.get('/api/feed/latest', {
+          params: { limit: 8 }
+        });
+
+        const fetchedArticles = response.data?.articles || [];
+        const mappedArticles = fetchedArticles.map((item) => ({
+          article_id: item.id,
+          title: item.heading,
+          description: item.nucleus_summary || (item.body || '').slice(0, 240),
+          content: item.body || '',
+          author: item.author || 'ET Bureau',
+          url: item.source_url || '',
+          urlToImage: item.image_url || '',
+          publishedAt: item.published_at,
+          source: {
+            name: item.source_name || 'ET Bureau'
+          }
+        }));
+
+        setMustReadArticles(mappedArticles.slice(0, 4));
+        setLoadingMustRead(false);
+      } catch (err) {
+        console.error('Error fetching must read news:', err);
+        setLoadingMustRead(false);
+      }
+    };
+
+    fetchMustReadNews();
+  }, []);
+
   const generateAIContext = (index) => {
     const contexts = [
       "AI Note: Competitor X just raised $5M in a down market. Here is how they pitched it compared to your recent deck.",
@@ -59,6 +129,35 @@ const LeftPanel = ({ onArticleClick }) => {
 
   return (
     <div className="border-r border-gray-200 pr-4 h-full overflow-y-auto">
+      {/* Featured Heading */}
+      <div className="mb-6 bg-gradient-to-r from-[#cc0000] to-red-700 text-white p-4 rounded-lg shadow-md">
+        <h1 className="font-serif text-2xl font-bold">ET NEWS DIGEST</h1>
+        <p className="text-sm text-red-100 mt-1">Your Daily Dose of Markets & Business</p>
+      </div>
+
+      {/* Breaking News Section */}
+      {loadingBreaking === false && breakingArticles.length > 0 && (
+        <div className="mb-6 bg-red-50 p-4 border-l-4 border-[#cc0000] rounded">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="bg-[#cc0000] text-white px-2 py-1 text-xs font-bold rounded">BREAKING</div>
+            <h3 className="font-bold text-sm text-[#cc0000]">Breaking News</h3>
+          </div>
+          <div className="space-y-3">
+            {breakingArticles.map((article, index) => (
+              <button
+                key={index}
+                onClick={() => handleArticleClick(article, index)}
+                className="w-full text-left p-2 bg-white rounded hover:bg-red-100 transition-colors group"
+              >
+                <p className="text-xs font-semibold text-gray-600 group-hover:text-[#cc0000]">{article.author}</p>
+                <p className="font-bold text-sm text-gray-900 line-clamp-2 mt-1">{article.title}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Latest News Feed */}
       <div className="flex items-center space-x-2 mb-4">
         <div className="h-4 w-4 rounded-full bg-[#cc0000] flex items-center justify-center">
           <div className="h-1.5 w-1.5 rounded-full bg-white"></div>
@@ -109,13 +208,42 @@ const LeftPanel = ({ onArticleClick }) => {
                   {article.title}
                 </h3>
                 <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                  <span className="font-semibold text-indigo-600">AI Note:</span> {generateAIContext(index)}
+                  {article.description}
                 </p>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Must Read Section */}
+      {loadingMustRead === false && mustReadArticles.length > 0 && (
+        <div className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border-l-4 border-blue-600 rounded">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="bg-blue-600 text-white px-2 py-1 text-xs font-bold rounded">EDITOR'S PICK</div>
+            <h3 className="font-bold text-sm text-blue-700">Must Read</h3>
+          </div>
+          <div className="space-y-2">
+            {mustReadArticles.map((article, index) => (
+              <button
+                key={index}
+                onClick={() => handleArticleClick(article, index)}
+                className="w-full text-left p-2 bg-white rounded hover:bg-blue-100 transition-colors group border border-blue-200 hover:border-blue-400"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                    {index + 1}
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <p className="text-xs font-semibold text-blue-700 group-hover:text-blue-900">{article.author}</p>
+                    <p className="font-semibold text-sm text-gray-900 line-clamp-2 mt-0.5 group-hover:text-blue-700">{article.title}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

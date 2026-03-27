@@ -16,9 +16,17 @@ export const useArticleStore = create((set, get) => ({
   loadingRelated: false,
   keywordData: null,
   keywordDataArticleId: null,
+  selectedCategory: null,
+  categoryArticles: [],
+  loadingCategory: false,
+  categoryError: null,
 
   setArticleId: (id) => {
     set({ article_id: id });
+  },
+
+  setSelectedCategory: (category) => {
+    set({ selectedCategory: category });
   },
 
   setbriefing: (briefing) => {
@@ -38,7 +46,11 @@ export const useArticleStore = create((set, get) => ({
       }
 
       // Avoid duplicate LLM calls for the same article unless forced.
-      if (!forceRefresh && cachedBriefing && cachedBriefingArticleId === article_id) {
+      if (
+        !forceRefresh &&
+        cachedBriefing &&
+        cachedBriefingArticleId === article_id
+      ) {
         return { status: "cached", briefing: cachedBriefing };
       }
 
@@ -134,61 +146,67 @@ export const useArticleStore = create((set, get) => ({
       throw error;
     }
   },
-getKeywordTimeline: async () => {
-  try {
-    const article_id = get().article_id;
+  getKeywordTimeline: async () => {
+    try {
+      const article_id = get().article_id;
 
-    if (!article_id) {
-      console.error("No article_id found");
-      return [];
-    }
+      if (!article_id) {
+        console.error("No article_id found");
+        return [];
+      }
 
-    set({ keywordTimeline: null, loadingKeywordTimeline: true });
+      set({ keywordTimeline: null, loadingKeywordTimeline: true });
 
-    const res = await axiosInstance.get(
-      `/api/articles/${article_id}/timeline`,
-    );
+      const res = await axiosInstance.get(
+        `/api/articles/${article_id}/timeline`,
+      );
 
-    const timelineEvents = res.data?.events;
+      const timelineEvents = res.data?.events;
 
-    if (!timelineEvents || timelineEvents.length === 0) {
+      if (!timelineEvents || timelineEvents.length === 0) {
+        set({ keywordTimeline: [], loadingKeywordTimeline: false });
+        return [];
+      }
+
+      const events = timelineEvents
+        .map((item, index) => {
+          const sourceIds = Array.isArray(item.source_article_ids)
+            ? item.source_article_ids
+            : [];
+          const mappedType = item.event_type || "narrative";
+
+          return {
+            article_id: sourceIds.length === 1 ? sourceIds[0] : null,
+            date: item.event_date || "",
+            title: item.title || `Story Event ${index + 1}`,
+            subtitle: mappedType.toUpperCase(),
+            description: item.description || "No event description available.",
+            type: mappedType,
+          };
+        })
+        .sort((a, b) => {
+          const left = a.date
+            ? new Date(a.date).getTime()
+            : Number.MAX_SAFE_INTEGER;
+          const right = b.date
+            ? new Date(b.date).getTime()
+            : Number.MAX_SAFE_INTEGER;
+          return left - right;
+        });
+
+      set({
+        keywordTimeline: events,
+        timelineArticleId: article_id,
+        loadingKeywordTimeline: false,
+      });
+
+      return events;
+    } catch (error) {
+      console.error("Keyword timeline error:", error);
       set({ keywordTimeline: [], loadingKeywordTimeline: false });
       return [];
     }
-
-    const events = timelineEvents
-      .map((item, index) => {
-        const sourceIds = Array.isArray(item.source_article_ids) ? item.source_article_ids : [];
-        const mappedType = item.event_type || "narrative";
-
-        return {
-          article_id: sourceIds.length === 1 ? sourceIds[0] : null,
-          date: item.event_date || "",
-          title: item.title || `Story Event ${index + 1}`,
-          subtitle: mappedType.toUpperCase(),
-          description: item.description || "No event description available.",
-          type: mappedType,
-        };
-      })
-      .sort((a, b) => {
-        const left = a.date ? new Date(a.date).getTime() : Number.MAX_SAFE_INTEGER;
-        const right = b.date ? new Date(b.date).getTime() : Number.MAX_SAFE_INTEGER;
-        return left - right;
-      });
-
-    set({
-      keywordTimeline: events,
-      timelineArticleId: article_id,
-      loadingKeywordTimeline: false,
-    });
-
-    return events;
-  } catch (error) {
-    console.error("Keyword timeline error:", error);
-    set({ keywordTimeline: [], loadingKeywordTimeline: false });
-    return [];
-  }
-},
+  },
 
   getStoryIntelligence: async (query = "") => {
     try {
@@ -201,7 +219,8 @@ getKeywordTimeline: async () => {
 
       set({ loadingStoryIntelligence: true });
 
-      const params = query && query.trim() ? { params: { query: query.trim() } } : undefined;
+      const params =
+        query && query.trim() ? { params: { query: query.trim() } } : undefined;
       const res = await axiosInstance.get(
         `/api/articles/${article_id}/story-intelligence`,
         params,
@@ -237,65 +256,118 @@ getKeywordTimeline: async () => {
     }
   },
 
- getRelatedArticles: async () => {
-  try {
-    const article_id = get().article_id;
-    const cachedKeywordData = get().keywordData;
-    const cachedKeywordArticleId = get().keywordDataArticleId;
+  getRelatedArticles: async () => {
+    try {
+      const article_id = get().article_id;
+      const cachedKeywordData = get().keywordData;
+      const cachedKeywordArticleId = get().keywordDataArticleId;
 
-    if (!article_id) {
-      console.error("No article_id found");
-      return [];
-    }
+      if (!article_id) {
+        console.error("No article_id found");
+        return [];
+      }
 
-    set({ loadingRelated: true });
+      set({ loadingRelated: true });
 
-    let keywordData = cachedKeywordData;
+      let keywordData = cachedKeywordData;
 
-    if (!keywordData || cachedKeywordArticleId !== article_id) {
-      const res = await axiosInstance.get(
-        `/api/articles/${article_id}/keyword`
-      );
-      keywordData = res.data?.keyword;
-      set({ keywordData: keywordData || null, keywordDataArticleId: article_id });
-    }
+      if (!keywordData || cachedKeywordArticleId !== article_id) {
+        const res = await axiosInstance.get(
+          `/api/articles/${article_id}/keyword`,
+        );
+        keywordData = res.data?.keyword;
+        set({
+          keywordData: keywordData || null,
+          keywordDataArticleId: article_id,
+        });
+      }
 
-    if (!keywordData || !keywordData.related_articles) {
+      if (!keywordData || !keywordData.related_articles) {
+        set({
+          relatedArticleList: [],
+          relatedArticles: [],
+          loadingRelated: false,
+        });
+        return [];
+      }
+
+      const related = keywordData.related_articles
+        .filter((item) => item.article_id !== article_id)
+        .slice(0, 5)
+        .map((item) => ({
+          article_id: item.article_id,
+          title: item.title,
+          date: item.created_at,
+        }));
+
+      set({
+        relatedArticleList: related,
+        relatedArticles: related,
+        loadingRelated: false,
+      });
+
+      return related;
+    } catch (error) {
+      console.error("Related articles error:", error);
+
       set({
         relatedArticleList: [],
         relatedArticles: [],
-        loadingRelated: false
+        loadingRelated: false,
+      });
+
+      return [];
+    }
+  },
+
+  getCategoryArticles: async (category) => {
+    try {
+      if (!category) {
+        set({ categoryArticles: [], selectedCategory: null });
+        return [];
+      }
+
+      set({ loadingCategory: true, categoryError: null });
+
+      const res = await axiosInstance.get(
+        `/api/articles/category/${category}`,
+        {
+          params: { limit: 12 },
+        },
+      );
+
+      const categoryData = res.data?.articles || [];
+      const mappedArticles = categoryData.map((item) => ({
+        article_id: item.id,
+        title: item.heading,
+        description: item.nucleus_summary || (item.body || "").slice(0, 240),
+        content: item.body || "",
+        author: item.author || "ET Bureau",
+        url: item.source_url || "",
+        urlToImage: item.image_url || "",
+        publishedAt: item.published_at,
+        category: item.category,
+        source: {
+          name: item.source_name || "ET Bureau",
+        },
+      }));
+
+      set({
+        categoryArticles: mappedArticles,
+        selectedCategory: category,
+        loadingCategory: false,
+        categoryError: null,
+      });
+
+      return mappedArticles;
+    } catch (error) {
+      console.error("Error fetching category articles:", error);
+      set({
+        categoryArticles: [],
+        loadingCategory: false,
+        categoryError: error.message || "Failed to load category articles",
       });
       return [];
     }
-
-    const related = keywordData.related_articles
-      .filter((item) => item.article_id !== article_id)
-      .slice(0, 5)
-      .map((item) => ({
-        article_id: item.article_id,
-        title: item.title,
-        date: item.created_at
-      }));
-
-    set({
-      relatedArticleList: related,
-      relatedArticles: related,
-      loadingRelated: false
-    });
-
-    return related;
-
-  } catch (error) {
-    console.error("Related articles error:", error);
-
-    set({
-      relatedArticleList: [],
-      relatedArticles: [],
-      loadingRelated: false
-    });
-
-    return [];
-  }
-},
+  },
 }));

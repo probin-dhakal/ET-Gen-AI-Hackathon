@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Search, TrendingUp, Menu } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axiosInstance from '../lib/axiosinstance';
 import { useArticleStore } from '../store/useArticle';
 
 const Header = ({ activeLanguage }) => {
   const navigate = useNavigate();
-  const { getArticleById, setArticleId, addArticle } = useArticleStore();
+  const location = useLocation();
+  const { getArticleById, setArticleId, addArticle, getCategoryArticles, selectedCategory } = useArticleStore();
+  const [activeNav, setActiveNav] = useState('home');
+  const [sensex, setSensex] = useState({ value: 76704.13, change: 633.29 });
+  const [nifty, setNifty] = useState({ value: 23286.45, change: 195.75 });
 
   const formatCurrentISTDateTime = (date) => {
     const day = new Intl.DateTimeFormat('en-IN', {
@@ -40,6 +44,29 @@ const Header = ({ activeLanguage }) => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [showResults, setShowResults] = useState(false);
+
+  // Fetch market indices data
+  const fetchMarketIndices = async () => {
+    try {
+      // Using realistic mock data - can be replaced with real API
+      // Example APIs: Alpha Vantage, Finnhub, Yahoo Finance
+      const mockData = {
+        sensex: { value: 76704.13 + Math.random() * 1000, change: 633.29 + (Math.random() - 0.5) * 200 },
+        nifty: { value: 23286.45 + Math.random() * 300, change: 195.75 + (Math.random() - 0.5) * 100 }
+      };
+      
+      setSensex({
+        value: parseFloat(mockData.sensex.value.toFixed(2)),
+        change: parseFloat(mockData.sensex.change.toFixed(2))
+      });
+      setNifty({
+        value: parseFloat(mockData.nifty.value.toFixed(2)),
+        change: parseFloat(mockData.nifty.change.toFixed(2))
+      });
+    } catch (error) {
+      console.error('Error fetching market indices:', error);
+    }
+  };
 
   const mapDbArticleToCard = (dbArticle, aiContext = null) => ({
     article_id: dbArticle.id,
@@ -165,6 +192,16 @@ const Header = ({ activeLanguage }) => {
     };
   }, []);
 
+  // Fetch market indices on mount and refresh every 30 seconds
+  useEffect(() => {
+    fetchMarketIndices();
+    const marketIntervalId = setInterval(fetchMarketIndices, 30000); // Refresh every 30 seconds
+    
+    return () => {
+      clearInterval(marketIntervalId);
+    };
+  }, []);
+
   useEffect(() => {
     if (searchQuery.trim() !== '') return;
     setSearchResults([]);
@@ -172,16 +209,70 @@ const Header = ({ activeLanguage }) => {
     setShowResults(false);
   }, [searchQuery]);
 
+  // Update active nav based on current route
+  useEffect(() => {
+    if (location.pathname === '/') {
+      setActiveNav('home');
+    } else if (location.pathname.includes('/article')) {
+      setActiveNav('myetai');
+    }
+  }, [location]);
+
+  const handleNavClick = (navItem) => {
+    setActiveNav(navItem);
+    navigate('/');
+    
+    switch (navItem) {
+      case 'home':
+        getCategoryArticles(null); // Clear category on home
+        break;
+      case 'myetai':
+        getCategoryArticles(null); // Clear category to show personalized feed
+        break;
+      case 'world':
+        getCategoryArticles('world');
+        break;
+      case 'india':
+        getCategoryArticles('india');
+        break;
+      case 'technology':
+        getCategoryArticles('technology');
+        break;
+      case 'business':
+        getCategoryArticles('business');
+        break;
+      case 'health':
+        getCategoryArticles('health');
+        break;
+      case 'education':
+        getCategoryArticles('education');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <header>
       {/* Utility Bar */}
       <div className="border-b border-gray-200 text-xs py-1 px-4 flex justify-between items-center text-gray-600">
-        <div className="flex space-x-4 items-center">
+        <div className="flex space-x-6 items-center">
           <span className="font-bold text-gray-800">BENCHMARKS <span className="text-red-600">CLOSED</span></span>
           <span className="flex items-center space-x-1">
             <span>Sensex</span>
-            <span className="font-bold text-gray-900">76,704.13</span>
-            <span className="text-green-600 flex items-center"><TrendingUp size={12} className="ml-1"/> 633.29</span>
+            <span className="font-bold text-gray-900">{sensex.value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+            <span className={`flex items-center ${sensex.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <TrendingUp size={12} className="ml-1"/> 
+              {sensex.change >= 0 ? '+' : ''}{sensex.change.toFixed(2)}
+            </span>
+          </span>
+          <span className="flex items-center space-x-1">
+            <span>Nifty</span>
+            <span className="font-bold text-gray-900">{nifty.value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+            <span className={`flex items-center ${nifty.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <TrendingUp size={12} className="ml-1"/> 
+              {nifty.change >= 0 ? '+' : ''}{nifty.change.toFixed(2)}
+            </span>
           </span>
         </div>
         
@@ -261,16 +352,60 @@ const Header = ({ activeLanguage }) => {
 
       {/* Navigation Menu */}
       <nav className="border-b-2 border-[#cc0000] sticky top-0 bg-red-50 z-10 flex items-center px-4 py-2 space-x-4 text-sm font-medium">
-        <Menu className="text-[#cc0000] cursor-pointer" size={24} />
-        <span className="text-[#cc0000] cursor-pointer">Home</span>
-        <span className="flex items-center cursor-pointer">
-          <span className="bg-[#cc0000] text-white text-[10px] px-1 mr-1 rounded-sm">ET</span>Prime
+        <Menu 
+          className="text-[#cc0000] cursor-pointer hover:opacity-70 transition" 
+          size={24}
+          onClick={() => alert('Menu coming soon')}
+        />
+        <span 
+          onClick={() => handleNavClick('home')}
+          className={`cursor-pointer transition-colors ${activeNav === 'home' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          Home
         </span>
-        <span className="cursor-pointer hover:text-[#cc0000]">Markets</span>
-        <span className="cursor-pointer text-[#cc0000] font-bold border-b-2 border-[#cc0000]">My ET AI</span>
-        <span className="cursor-pointer hover:text-[#cc0000]">Industry</span>
-        <span className="cursor-pointer hover:text-[#cc0000]">Wealth</span>
-        <span className="cursor-pointer hover:text-[#cc0000]">Tech</span>
+        <span 
+          onClick={() => handleNavClick('world')}
+          className={`cursor-pointer transition-colors ${activeNav === 'world' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          World
+        </span>
+        <span 
+          onClick={() => handleNavClick('india')}
+          className={`cursor-pointer transition-colors ${activeNav === 'india' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          India
+        </span>
+        <span 
+          onClick={() => handleNavClick('technology')}
+          className={`cursor-pointer transition-colors ${activeNav === 'technology' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          Technology
+        </span>
+        <span 
+          onClick={() => handleNavClick('business')}
+          className={`cursor-pointer transition-colors ${activeNav === 'business' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          Business
+        </span>
+        <span 
+          onClick={() => handleNavClick('health')}
+          className={`cursor-pointer transition-colors ${activeNav === 'health' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          Health
+        </span>
+        <span 
+          onClick={() => handleNavClick('education')}
+          className={`cursor-pointer transition-colors ${activeNav === 'education' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          Education
+        </span>
+        <span className="text-gray-300">|</span>
+        <span 
+          onClick={() => handleNavClick('myetai')}
+          className={`cursor-pointer font-bold transition-colors ${activeNav === 'myetai' ? 'text-[#cc0000] border-b-2 border-[#cc0000]' : 'hover:text-[#cc0000]'}`}
+        >
+          My ET AI
+        </span>
       </nav>
     </header>
   );

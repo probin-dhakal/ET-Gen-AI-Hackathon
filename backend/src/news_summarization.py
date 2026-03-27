@@ -10,9 +10,6 @@ from langchain_openai import AzureChatOpenAI # Updated import
 
 load_dotenv()
 
-# ==============================
-# 📦 MODELS
-# ==============================
 
 class Scene(BaseModel):
     text: str
@@ -23,7 +20,7 @@ class VideoScript(BaseModel):
     scenes: List[Scene]
 
 # ==============================
-# 🎙️ VOICES
+#  VOICES
 # ==============================
 
 LANGUAGE_VOICES = {
@@ -45,7 +42,7 @@ LANGUAGE_VOICES_MALE = {
 }
 
 # ==============================
-# 🎬 GENERATOR
+# GENERATOR
 # ==============================
 
 class NewsVideoGenerator:
@@ -64,12 +61,17 @@ class NewsVideoGenerator:
             cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", file_path]
             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             data = json.loads(result.stdout)
-            return float(data["format"]["duration"])
-        except Exception:
-            return 0
+            duration = float(data["format"]["duration"])
+            if duration <= 0:
+                print(f"⚠️  Invalid audio duration: {duration}. Using fallback of 10 seconds.")
+                return 10.0
+            return duration
+        except Exception as e:
+            print(f"⚠️  Failed to get audio duration: {e}. Using fallback of 10 seconds.")
+            return 10.0
 
     # ==========================================
-    # 🧠 STRUCTURED SCRIPT GENERATION
+    # STRUCTURED SCRIPT GENERATION
     # ==========================================
 
     def generate_visual_script(self, article, narration, language) -> List[Scene]:
@@ -123,7 +125,7 @@ class NewsVideoGenerator:
         
         STRICT RULES:
         - Start EXACTLY with: "{intro}"
-        - Duration: 60–80 seconds (~150-180 words)
+        - Duration: 60-80 seconds (~150-180 words)
         - Structure: Hook → Key facts → Impact → Outro
         - Do NOT include labels like "Intro:" or brackets.
 

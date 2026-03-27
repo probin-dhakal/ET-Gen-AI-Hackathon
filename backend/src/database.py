@@ -476,19 +476,19 @@ class DatabaseManager:
     
     def get_all_keywords_with_summaries(self) -> List[dict]:
         """
-        Get all keywords with their summaries array and timestamps.
+        Get all keywords with their summaries array from article_keywords_list table.
         
         Returns:
             List of dicts with structure:
             {
-                'keyword_id': int,
+                'keyword_id': int (using akl.id),
                 'keyword_name': str,
                 'article_count': int,
                 'keyword_created_at': timestamp,
                 'keyword_updated_at': timestamp,
                 'summaries': [
                     {
-                        'summary': str,
+                        'summary': str (nucleus_summary from article),
                         'article_id': int,
                         'created_at': timestamp
                     },
@@ -499,38 +499,39 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            # Get all keywords
+            # Get all unique keywords and their article counts from article_keywords_list
             cursor.execute("""
                 SELECT 
-                    id,
-                    name,
-                    article_count,
-                    created_at,
-                    updated_at
-                FROM keywords
-                ORDER BY updated_at DESC
+                    keyword_name,
+                    COUNT(DISTINCT article_id) as article_count,
+                    MIN(created_at) as keyword_created_at,
+                    MAX(created_at) as keyword_updated_at
+                FROM article_keywords_list
+                GROUP BY keyword_name
+                ORDER BY keyword_updated_at DESC
             """)
             
             all_keywords = cursor.fetchall()
             result = []
+            keyword_id = 1
             
             for keyword_row in all_keywords:
-                keyword_id = keyword_row[0]
-                keyword_name = keyword_row[1]
-                article_count = keyword_row[2]
-                created_at = keyword_row[3]
-                updated_at = keyword_row[4]
+                keyword_name = keyword_row[0]
+                article_count = keyword_row[1]
+                created_at = keyword_row[2]
+                updated_at = keyword_row[3]
                 
-                # Get all summaries for this keyword
+                # Get all summaries for this keyword from related articles
                 cursor.execute("""
                     SELECT 
-                        nucleus_summary,
-                        article_id,
-                        created_at
-                    FROM keyword_summaries
-                    WHERE keyword_id = ?
-                    ORDER BY created_at DESC
-                """, (keyword_id,))
+                        a.nucleus_summary,
+                        a.id as article_id,
+                        akl.created_at
+                    FROM article_keywords_list akl
+                    JOIN articles a ON akl.article_id = a.id
+                    WHERE akl.keyword_name = ?
+                    ORDER BY akl.created_at DESC
+                """, (keyword_name,))
                 
                 summaries_rows = cursor.fetchall()
                 summaries = [
@@ -550,6 +551,8 @@ class DatabaseManager:
                     'keyword_updated_at': updated_at,
                     'summaries': summaries
                 })
+                
+                keyword_id += 1
             
             return result
     
