@@ -521,16 +521,17 @@ class DatabaseManager:
                 created_at = keyword_row[2]
                 updated_at = keyword_row[3]
                 
-                # Get all summaries for this keyword from related articles
+                # Get all summaries for this keyword from related articles (DISTINCT to avoid duplicates)
                 cursor.execute("""
-                    SELECT 
+                    SELECT DISTINCT
                         a.nucleus_summary,
                         a.id as article_id,
-                        akl.created_at
+                        MAX(akl.created_at) as created_at
                     FROM article_keywords_list akl
                     JOIN articles a ON akl.article_id = a.id
                     WHERE akl.keyword_name = ?
-                    ORDER BY akl.created_at DESC
+                    GROUP BY a.id
+                    ORDER BY created_at DESC
                 """, (keyword_name,))
                 
                 summaries_rows = cursor.fetchall()

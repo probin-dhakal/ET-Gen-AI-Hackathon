@@ -5,7 +5,7 @@ import { useArticleStore } from '../store/useArticle';
 import { fetchImageFromPexels } from '../lib/imageService';
 
 const CenterFeed = ({ onArticleClick, onOpenPersonaModal }) => {
-    const { selectedCategory, categoryArticles, loadingCategory, categoryError } = useArticleStore();
+    const { selectedCategory, categoryArticles, loadingCategory, categoryError, selectedPersona } = useArticleStore();
     
     const handleArticleClick = (article, index) => {
       if (typeof onArticleClick === 'function') {
@@ -15,7 +15,6 @@ const CenterFeed = ({ onArticleClick, onOpenPersonaModal }) => {
 
   // Persona-related state
   const [personas, setPersonas] = useState([]);
-  const [selectedPersona, setSelectedPersona] = useState('startup_founder');
   const [personalizedArticles, setPersonalizedArticles] = useState([]);
   const [isLoadingPersonalized, setIsLoadingPersonalized] = useState(false);
   const [personalizedError, setPersonalizedError] = useState(null);

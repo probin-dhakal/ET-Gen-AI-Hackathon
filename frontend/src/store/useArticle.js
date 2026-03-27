@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axiosInstance from "../lib/axiosinstance.js";
+import { fetchImageFromPexels } from "../lib/imageService.js";
 
 export const useArticleStore = create((set, get) => ({
   article_id: null,
@@ -23,6 +24,10 @@ export const useArticleStore = create((set, get) => ({
   categoryArticles: [],
   loadingCategory: false,
   categoryError: null,
+  selectedPersona: "startup_founder",
+  personalizedArticles: [],
+  loadingPersonalized: false,
+  personalizedError: null,
 
   setArticleId: (id) => {
     set({ article_id: id });
@@ -38,6 +43,10 @@ export const useArticleStore = create((set, get) => ({
 
   setSelectedCategory: (category) => {
     set({ selectedCategory: category });
+  },
+
+  setSelectedPersona: (persona) => {
+    set({ selectedPersona: persona });
   },
 
   setbriefing: (briefing) => {
@@ -305,12 +314,19 @@ export const useArticleStore = create((set, get) => ({
 
       const related = keywordData.related_articles
         .filter((item) => item.article_id !== article_id)
-        .slice(0, 5)
+        .slice(0, 6)
         .map((item) => ({
           article_id: item.article_id,
           title: item.title,
+          summary: item.nucleus_summary || item.summary || "",
           date: item.created_at,
+          urlToImage: "", // Will be fetched from Pexels
         }));
+
+      // Fetch images from Pexels for all related articles
+      for (let i = 0; i < related.length; i++) {
+        related[i].urlToImage = await fetchImageFromPexels(related[i].title);
+      }
 
       set({
         relatedArticleList: related,

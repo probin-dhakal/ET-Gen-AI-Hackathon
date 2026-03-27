@@ -41,6 +41,36 @@ PERSONAS = {
         "role": "Enterprise Executive",
         "interests": ["Digital transformation", "Cloud infrastructure", "B2B partnerships", "Regulatory compliance", "Enterprise AI", "Market consolidation"],
         "goal": "Drive digital transformation and stay competitive in enterprise market."
+    },
+    "policy_maker": {
+        "id": "policy_maker",
+        "role": "Government Policy Maker",
+        "interests": ["Economic policy", "Fiscal reform", "FDI", "Employment", "Infrastructure", "Taxation"],
+        "goal": "Understand economic impacts and policy effectiveness for decision making."
+    },
+    "financial_analyst": {
+        "id": "financial_analyst",
+        "role": "Financial Analyst",
+        "interests": ["Earnings reports", "Market analysis", "Bonds", "Currency trends", "Credit ratings", "Economic indicators"],
+        "goal": "Conduct in-depth analysis and provide investment recommendations."
+    },
+    "business_journalist": {
+        "id": "business_journalist",
+        "role": "Business Journalist",
+        "interests": ["Corporate news", "Market trends", "B2B partnerships", "Acquisitions", "Industry insights", "Breaking news"],
+        "goal": "Report on significant business developments and market movements."
+    },
+    "mid_level_executive": {
+        "id": "mid_level_executive",
+        "role": "Mid-Level Executive",
+        "interests": ["Operational efficiency", "Industry trends", "Competitor analysis", "Employee development", "Cost management", "Growth opportunities"],
+        "goal": "Stay informed about industry changes and improve operational efficiency."
+    },
+    "student_economist": {
+        "id": "student_economist",
+        "role": "Student & Economist",
+        "interests": ["Economic theory", "Case studies", "Macroeconomics", "Market dynamics", "Research papers", "Data analysis"],
+        "goal": "Learn about real-world economic applications and market behavior."
     }
 }
 
