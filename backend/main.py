@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 from src.news_translation import VernacularNewsTranslator 
-# from src.news_summarization import NewsVideoGenerator
+from src.news_summarization import NewsVideoGenerator
 from src.database import DatabaseManager
 from fastapi.staticfiles import StaticFiles
 import json
