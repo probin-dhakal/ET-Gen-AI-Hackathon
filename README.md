@@ -14,22 +14,21 @@
 
 **ET Gen-AI NewsNavigator** is an advanced news platform that transforms how news is discovered and understood. Using AI agents, semantic search, and personalization, it delivers intelligent news experiences tailored to user roles and interests.
 
-### 🎯 Key Features
+### Key Features
 
 | Feature                      | Description                                  |
 | ---------------------------- | -------------------------------------------- |
-| 🎯 **Smart Personalization** | 4 distinct user personas with tailored feeds |
-| 🔍 **Semantic Search**       | Vector-based search across 2000+ articles    |
-| 🎬 **AI Video Summaries**    | 60-second auto-generated briefs per article  |
-| 📊 **Story Arc Analysis**    | Track sentiment shifts and news evolution    |
-| 🌍 **Multi-Language**        | 6 Indian languages (EN, HI, TA, TE, BN, AS)  |
-| 💬 **Deeper Dive Q&A**       | Interactive AI questions with citations      |
-| ⚡ **Real-time Processing**  | Sub-500ms API responses                      |
-| 🚀 **Scalable Architecture** | Handles 10K+ concurrent users                |
+|  **Smart Personalization** | 4 distinct user personas with tailored feeds |
+|  **Semantic Search**       | Vector-based search across 2000+ articles    |
+|  **AI Video Summaries**    | 60-second auto-generated briefs per article  |
+|  **Story Arc Analysis**    | Track sentiment shifts and news evolution    |
+|  **Multi-Language**        | 6 Indian languages (EN, HI, TA, TE, BN, AS)  |
+|  **Deeper Dive Q&A**       | Interactive AI questions with citations      |
+
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -60,17 +59,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Set environment variables
-export DATABASE_URL="postgresql://user:password@localhost:5432/et_news"
-export AZURE_OPENAI_API_KEY="your-azure-openai-key"
-export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-export AZURE_OPENAI_API_VERSION="2024-08-01-preview"
-export AZURE_OPENAI_DEPLOYMENT_NAME="gpt-5.4-nano"
-export PEXELS_API_KEY="your-pexels-key"
-export ENABLE_VECTOR_INDEXING="true"
-
-# Run migrations
-python -c "from src.init_db import init_database; init_database()"
 
 # Start backend server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -89,7 +77,7 @@ npm run dev
 # Runs on http://localhost:5173
 ```
 
-#### 4. Video Generation Service (Optional)
+#### 4. Video Generation Service 
 
 ```bash
 cd remotion-server
@@ -153,7 +141,7 @@ et-gen-ai-newsnav/
 
 ---
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables
 
@@ -161,27 +149,65 @@ et-gen-ai-newsnav/
 
 ```bash
 # Database
+# ==================================
+# Azure OpenAI Configuration
+# ==================================
+AZURE_OPENAI_API_KEY=your_azure_openai_api_key_here
+AZURE_OPENAI_ENDPOINT=https://your-azure-resource.openai.azure.com/
+AZURE_OPENAI_API_VERSION=2024-08-01-preview
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.4-nano
+
+# ==================================
+# Database Configuration
+# ==================================
 DATABASE_URL=postgresql://user:password@localhost:5432/et_news
-DB_POOL_SIZE=20
-DB_MAX_OVERFLOW=40
+DATABASE_POOL_SIZE=20
+DATABASE_MAX_OVERFLOW=40
 
-# API Keys
-GOOGLE_API_KEY=your-google-genai-key
-PEXELS_API_KEY=your-pexels-key
-
-# Feature Flags
+# ==================================
+# Vector Store Configuration
+# ==================================
+VECTOR_STORE_PATH=db/news_navigator_vectors
+SENTENCE_TRANSFORMER_MODEL=all-MiniLM-L6-v2
 ENABLE_VECTOR_INDEXING=true
+
+# ==================================
+# Azure Services
+# ==================================
+AZURE_SPEECH_KEY=your_azure_speech_api_key_here
+AZURE_SPEECH_REGION=your_azure_speech_region_here
+
+# ==================================
+# External APIs
+# ==================================
+PEXELS_API_KEY=your_pexels_api_key_here
+
+# ==================================
+# Cloudflare Configuration (Optional)
+# ==================================
+CF_ACCOUNT_ID=your_cloudflare_account_id_here
+CF_API_TOKEN=your_cloudflare_api_token_here
+
+# ==================================
+# Feature Flags
+# ==================================
 ENABLE_VIDEO_GENERATION=true
 ENABLE_TRANSLATION=true
 
-# Performance
-MAX_CONCURRENT_REQUESTS=10000
+# ==================================
+# Performance Settings
+# ==================================
 REQUEST_TIMEOUT_SECONDS=30
 LLM_TIMEOUT_SECONDS=30
 CACHE_TTL_SECONDS=3600
+MAX_CONCURRENT_REQUESTS=10000
 
-# Services
+# ==================================
+# Services URLs
+# ==================================
 REMOTION_SERVER_URL=http://localhost:3000
+
+
 ```
 
 #### Frontend (.env)
@@ -193,7 +219,7 @@ VITE_PEXELS_API_KEY=your-pexels-key
 
 ---
 
-## 🤖 AI Agents
+##  AI Agents
 
 ### Agent Architecture
 
@@ -217,7 +243,7 @@ For detailed agent behavior, workflows, and error handling, see [ARCHITECTURE.md
 
 ---
 
-## 📊 API Endpoints
+## API Endpoints
 
 ### Core Endpoints
 
@@ -291,7 +317,7 @@ For complete API documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md#api-endp
 
 ---
 
-## 🎯 User Personas
+## User Personas
 
 The platform supports 4 distinct user personas with tailored content:
 
@@ -303,41 +329,6 @@ The platform supports 4 distinct user personas with tailored content:
 | **Policy Maker**         | Government Official | Economic policy, FDI, Employment   | Assess policy effectiveness         |
 
 Each persona receives personalized 3-5 stories/day instead of generic 50-article feeds.
-
----
-
-## 💼 Business Impact
-
-### Quantified Metrics (Year 1 Projections)
-
-#### Time Value Recovery
-
-- **Per User**: 37 min/day saved × 365 = **225 hours/year**
-- **100K DAU**: 22.6M hours/year = **$565M recovered** (at $25/hr)
-
-#### Cost Reduction
-
-- Traditional curation: 120 editors × $100K = $12M/year
-- AI automation: **90% reduction = $2.4M savings**
-- Reinvest: 10 ML engineers managing system
-
-#### Revenue Opportunities
-
-| Stream                | Calculation                  | Annual     |
-| --------------------- | ---------------------------- | ---------- |
-| Premium Subscriptions | 50K users × $7.50/mo × 12    | $4.5M      |
-| Programmatic Ads      | 3-5x CTR premium × inventory | $2M+       |
-| Enterprise API        | Corporate subscribers        | $1M+       |
-| **Total**             |                              | **$7.5M+** |
-
-### Key Assumptions
-
-- 100K daily active users by year-end
-- 50% premium conversion rate (quality justifies cost)
-- Ad impressions: 2B/month (50 articles × 100K DAU × 0.4 engagement)
-- Cost per impression: $1-2 (premium due to relevance)
-
-For detailed business case with full assumptions, see [README-PPT.md](./README-PPT.md#business-impact).
 
 ---
 
@@ -372,214 +363,6 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md#error-handling--resilience) for error ha
 
 ---
 
-## 🧪 Testing
-
-### Run Backend Tests
-
-```bash
-cd backend
-pytest tests/ -v --cov=src
-```
-
-### Run Frontend Tests
-
-```bash
-cd frontend
-npm test
-```
-
-### Integration Tests
-
-```bash
-# Test full API flow
-cd backend
-python -m pytest tests/integration/ -v
-```
-
----
-
-## 📝 Development Workflow
-
-### Backend Development
-
-```bash
-# Watch for changes and reload
-uvicorn main:app --reload
-
-# Run specific endpoint tests
-pytest -k "test_search" -v
-
-# Check code quality
-pylint src/
-black --check src/
-```
-
-### Frontend Development
-
-```bash
-# Hot module reload
-npm run dev
-
-# Build production bundle
-npm run build
-
-# Preview production build
-npm run preview
-```
-
-### Code Style
-
-- **Python**: Black (line length: 88), isort for imports
-- **JavaScript**: ESLint, Prettier (line length: 100)
-
----
-
-## 🚀 Deployment
-
-### Docker Deployment
-
-```bash
-# Build and run backend
-docker build -f backend/Dockerfile -t et-backend .
-docker run -p 8000:8000 \
-  -e DATABASE_URL="postgresql://..." \
-  -e GOOGLE_API_KEY="..." \
-  et-backend
-
-# Build and run frontend
-docker build -f frontend/Dockerfile -t et-frontend .
-docker run -p 80:5173 et-frontend
-```
-
-### Cloud Run Deployment
-
-```bash
-# Deploy backend
-gcloud run deploy et-newsnav-backend \
-  --source backend \
-  --platform managed \
-  --memory 2Gi
-
-# Deploy frontend
-gcloud run deploy et-newsnav-frontend \
-  --source frontend \
-  --platform managed \
-  --allow-unauthenticated
-```
-
-### Database Migrations
-
-```bash
-# Create migration
-alembic revision --autogenerate -m "Add new table"
-
-# Apply migration
-alembic upgrade head
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### LLM Timeout
-
-```python
-# Increase timeout in backend/main.py
-generation_config=genai.types.GenerationConfig(
-    temperature=0.7,
-    max_output_tokens=1000,
-    timeout=60  # Increase from 30
-)
-```
-
-#### Vector Index Build Failure
-
-```bash
-# Enable vector indexing (flag in .env)
-ENABLE_VECTOR_INDEXING=true
-
-# Rebuild index
-python -c "from src.vector_store import VectorStore; VectorStore().build_index()"
-```
-
-#### Database Connection Errors
-
-```bash
-# Check connection string
-echo $DATABASE_URL
-
-# Test connection
-psql $DATABASE_URL -c "SELECT 1"
-
-# Verify pool settings and restart services
-```
-
-#### Video Generation Timeout
-
-```bash
-# Check Remotion service is running on port 3000
-curl http://localhost:3000/health
-
-# Increase video timeout
-# In backend/main.py: timeout=120 for video requests
-```
-
----
-
-## 📈 Roadmap
-
-### Phase 1 (Current - March 2026) ✅
-
-- Core personalization & semantic search
-- Multi-language translation
-- Story arc analysis
-- AI deeper dive module
-
-### Phase 2 (Q2 2026) - Enhanced Intelligence
-
-- Live data integration (news APIs)
-- Real-time sentiment monitoring
-- Portfolio impact predictions
-- Community insights & sharing
-
-### Phase 3 (Q3 2026) - Expansion
-
-- Mobile app (React Native)
-- Browser extension
-- Collaborative filtering
-- Custom alert system
-
-### Phase 4 (Q4 2026) - Scale
-
-- Multi-source aggregation
-- Influencer integrations
-- Advanced analytics dashboard
-- GraphQL API
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests for new functionality
-5. Commit with clear messages (`git commit -m 'Add amazing feature'`)
-6. Push to branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-### Code Quality
-
-- Run tests before pushing
-- Maintain >80% code coverage
-- Follow style guides (Black for Python, Prettier for JS)
-- Update documentation for API changes
-
----
 
 ## 📄 License
 
@@ -587,37 +370,7 @@ This project is licensed under the MIT License - see [LICENSE](./LICENSE) file f
 
 ---
 
-## 🙋 Support & Feedback
 
-- **Bug Reports**: [GitHub Issues](https://github.com/economic-times/et-gen-ai-newsnav/issues)
-- **Feature Requests**: [GitHub Discussions](https://github.com/economic-times/et-gen-ai-newsnav/discussions)
-- **Email**: tech@economictimes.com
-
----
-
-## 🙏 Acknowledgments
-
-- **Economic Times** for the hackathon opportunity
-- **Azure OpenAI** for gpt-5.4-nano LLM capabilities
-- **LangChain/LangGraph** for agent orchestration framework
-- **Pexels** for image API
-- **Remotion** for video generation
-- **Sentence Transformers** for embeddings
-
----
-
-## 📞 Contact
-
-**Development Team**
-
-- **Project Lead**: ET Tech Lab
-- **Backend Architect**: AI Engineering Team
-- **Frontend Lead**: UI/UX Team
-- **ML Engineer**: Intelligence Team
-
-For questions or partnerships: tech@economictimes.com
-
----
 
 ## 📊 Project Stats
 
@@ -631,7 +384,7 @@ For questions or partnerships: tech@economictimes.com
 
 <div align="center">
 
-**Made with ❤️ by the Economic Times Tech Lab**
+**Made with ❤️ by the Neural Ninjas**
 
 [Documentation](./ARCHITECTURE.md) • [Presentation](./README-PPT.md) • [Issues](https://github.com/economic-times/et-gen-ai-newsnav/issues) • [Discussions](https://github.com/economic-times/et-gen-ai-newsnav/discussions)
 
