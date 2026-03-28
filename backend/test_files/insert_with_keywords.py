@@ -11,9 +11,9 @@ from datetime import datetime
 from src.database import DatabaseManager
 from src.keyword_extractor import HeadingKeywordExtractor
 from src.vector_store import VectorStore
-from insert_detailed_articles import articles as DETAILED_ARTICLES
+from backend.test_files.insert_detailed_articles import articles as DETAILED_ARTICLES
 # Import the sample articles from the insert script
-from insert_sample_articles import SAMPLE_ARTICLES
+from backend.test_files.insert_sample_articles import SAMPLE_ARTICLES
 
 def insert_articles_with_processing():
     """Insert all sample articles with keyword extraction and vector DB indexing."""
