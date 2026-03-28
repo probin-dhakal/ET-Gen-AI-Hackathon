@@ -36,7 +36,7 @@
 - Python 3.9+
 - Node.js 18+
 - PostgreSQL 14+
-- Azure OpenAI API key (for gpt-5.1-nano model)
+- Azure OpenAI API key (for gpt-5.4-nano model)
 - Pexels API key (optional, for images)
 
 ### Installation
@@ -65,7 +65,7 @@ export DATABASE_URL="postgresql://user:password@localhost:5432/et_news"
 export AZURE_OPENAI_API_KEY="your-azure-openai-key"
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
 export AZURE_OPENAI_API_VERSION="2024-08-01-preview"
-export AZURE_OPENAI_DEPLOYMENT_NAME="gpt-5.1-nano"
+export AZURE_OPENAI_DEPLOYMENT_NAME="gpt-5.4-nano"
 export PEXELS_API_KEY="your-pexels-key"
 export ENABLE_VECTOR_INDEXING="true"
 
@@ -598,7 +598,7 @@ This project is licensed under the MIT License - see [LICENSE](./LICENSE) file f
 ## 🙏 Acknowledgments
 
 - **Economic Times** for the hackathon opportunity
-- **Azure OpenAI** for gpt-5.1-nano LLM capabilities
+- **Azure OpenAI** for gpt-5.4-nano LLM capabilities
 - **LangChain/LangGraph** for agent orchestration framework
 - **Pexels** for image API
 - **Remotion** for video generation

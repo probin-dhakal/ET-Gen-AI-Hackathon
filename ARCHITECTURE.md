@@ -334,7 +334,7 @@ Output: {
 
 | Tool                            | Purpose                            | Integration              | Error Handling                     |
 | ------------------------------- | ---------------------------------- | ------------------------ | ---------------------------------- |
-| **Azure OpenAI (gpt-5.1-nano)** | LLM backbone, generation, analysis | `azure-openai` SDK       | Retry (3x), timeout 30s → fallback |
+| **Azure OpenAI (gpt-5.4-nano)** | LLM backbone, generation, analysis | `azure-openai` SDK       | Retry (3x), timeout 30s → fallback |
 | **FAISS Vector DB**             | Semantic search, embeddings        | Sentence Transformers    | Fallback to keyword search         |
 | **PostgreSQL**                  | Article/metadata storage           | SQLAlchemy ORM           | Connection retry, cached fallback  |
 | **Pexels API**                  | Article images                     | Direct HTTP calls        | Use placeholder image on failure   |
@@ -697,7 +697,7 @@ async def health_check():
 | **Article Volume**    | ~500 new articles/day                               | Cache invalidation hourly      |
 | **Concurrent Users**  | Max 10K concurrent                                  | Connection pooling (20)        |
 | **Response Time SLA** | <500ms for API responses                            | Timeout: 30s for heavy ops     |
-| **LLM Cost**          | ~$0.01-0.03 per request (Azure OpenAI gpt-5.1-nano) | Caching & batch processing     |
+| **LLM Cost**          | ~$0.01-0.03 per request (Azure OpenAI gpt-5.4-nano) | Caching & batch processing     |
 | **Vector Index Size** | 2000-5000 articles                                  | In-memory FAISS (CPU)          |
 | **Database Size**     | ~50GB annual growth                                 | Partitioning after 1M articles |
 
