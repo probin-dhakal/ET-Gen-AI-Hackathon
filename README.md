@@ -86,7 +86,7 @@ cd remotion-server
 npm install
 
 # Start Remotion service
-npm start
+npm run dev
 # Runs on http://localhost:3000
 ```
 
