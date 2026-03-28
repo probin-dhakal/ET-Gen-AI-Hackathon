@@ -332,14 +332,14 @@ Output: {
 
 ### Core Tools
 
-| Tool                      | Purpose                            | Integration              | Error Handling                     |
-| ------------------------- | ---------------------------------- | ------------------------ | ---------------------------------- |
-| **Google Gemini 1.5 Pro** | LLM backbone, generation, analysis | `langchain-google-genai` | Retry (3x), timeout 30s → fallback |
-| **FAISS Vector DB**       | Semantic search, embeddings        | In-memory (CPU)          | Fallback to keyword search         |
-| **PostgreSQL**            | Article/metadata storage           | SQLAlchemy ORM           | Connection retry, cached fallback  |
-| **Pexels API**            | Article images                     | Direct HTTP calls        | Use placeholder image on failure   |
-| **Remotion.js**           | Video generation                   | Separate Node.js service | Retry, queue management            |
-| **Google Translate API**  | Multi-language support             | langchain wrapper        | Fallback to pre-translated content |
+| Tool                            | Purpose                            | Integration              | Error Handling                     |
+| ------------------------------- | ---------------------------------- | ------------------------ | ---------------------------------- |
+| **Azure OpenAI (gpt-5.1-nano)** | LLM backbone, generation, analysis | `azure-openai` SDK       | Retry (3x), timeout 30s → fallback |
+| **FAISS Vector DB**             | Semantic search, embeddings        | Sentence Transformers    | Fallback to keyword search         |
+| **PostgreSQL**                  | Article/metadata storage           | SQLAlchemy ORM           | Connection retry, cached fallback  |
+| **Pexels API**                  | Article images                     | Direct HTTP calls        | Use placeholder image on failure   |
+| **Remotion.js**                 | Video generation                   | Separate Node.js service | Retry, queue management            |
+| **Azure Speech**                | Text-to-speech, audio              | Azure Speech SDK         | Fallback to pre-recorded audio     |
 
 ### Tool Calling Pattern (LangGraph)
 
@@ -380,19 +380,27 @@ agent = create_tool_calling_agent(tools=[
 ### 1. **LLM Timeout & Rate Limiting**
 
 ```python
+from azure.openai import AzureOpenAI
+
 class ResilientLLMClient:
+    def __init__(self):
+        self.client = AzureOpenAI(
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+        )
+
     def generate(self, prompt: str, max_retries: int = 3) -> str:
         for attempt in range(max_retries):
             try:
-                response = llm.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.7,
-                        max_output_tokens=1000
-                    ),
+                response = self.client.chat.completions.create(
+                    model=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    max_tokens=1000,
                     timeout=30  # 30 second timeout
                 )
-                return response.text
+                return response.choices[0].message.content
             except TimeoutError:
                 if attempt == 0:
                     # Retry with longer timeout
@@ -406,8 +414,8 @@ class ResilientLLMClient:
                 else:
                     # Fallback response
                     return "Analysis unavailable. Please try again."
-            except RateLimitError:
-                # Exponential backoff
+            except Exception as e:
+                # Azure OpenAI rate limit or other errors
                 wait_time = 2 ** attempt
                 sleep(wait_time)
                 continue
@@ -684,14 +692,14 @@ async def health_check():
 
 ## Assumptions & Constraints
 
-| Item                  | Assumption               | Impact                         |
-| --------------------- | ------------------------ | ------------------------------ |
-| **Article Volume**    | ~500 new articles/day    | Cache invalidation hourly      |
-| **Concurrent Users**  | Max 10K concurrent       | Connection pooling (20)        |
-| **Response Time SLA** | <500ms for API responses | Timeout: 30s for heavy ops     |
-| **LLM Cost**          | ~$0.05 per request       | Caching & batch processing     |
-| **Vector Index Size** | 2000-5000 articles       | In-memory FAISS (CPU)          |
-| **Database Size**     | ~50GB annual growth      | Partitioning after 1M articles |
+| Item                  | Assumption                                          | Impact                         |
+| --------------------- | --------------------------------------------------- | ------------------------------ |
+| **Article Volume**    | ~500 new articles/day                               | Cache invalidation hourly      |
+| **Concurrent Users**  | Max 10K concurrent                                  | Connection pooling (20)        |
+| **Response Time SLA** | <500ms for API responses                            | Timeout: 30s for heavy ops     |
+| **LLM Cost**          | ~$0.01-0.03 per request (Azure OpenAI gpt-5.1-nano) | Caching & batch processing     |
+| **Vector Index Size** | 2000-5000 articles                                  | In-memory FAISS (CPU)          |
+| **Database Size**     | ~50GB annual growth                                 | Partitioning after 1M articles |
 
 ---
 

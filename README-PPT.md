@@ -94,7 +94,7 @@ _Revolutionizing How News is Discovered and Understood_
 
 - FastAPI (Python) - High-performance async API
 - PostgreSQL + Vector DB (FAISS) - Semantic search
-- Google GenAI (Gemini-1.5) - LLM backbone
+- Azure OpenAI (gpt-5.1-nano) - LLM backbone
 - LangChain + LangGraph - Agent orchestration
 
 **Video Generation**
@@ -132,6 +132,7 @@ _Revolutionizing How News is Discovered and Understood_
 
 - **Search Latency**: 200ms (semantic) vs. 500ms (traditional)
 - **Video Generation**: 45-60 seconds per article
+- **LLM Response**: <2 seconds (Azure OpenAI gpt-5.1-nano)
 - **API Response**: <500ms for personalized feed (50 articles)
 - **Uptime Target**: 99.5% (FastAPI + async architecture)
 - **Concurrent Users**: Support 10K+ with current stack
