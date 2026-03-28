@@ -1,4 +1,4 @@
-# 🗞️ ET Gen-AI NewsNavigator
+# ET Gen-AI NewsNavigator
 
 > **AI-Powered Personalized News Intelligence Platform**  
 > Making news discovery intelligent, multi-lingual, and insightful.
