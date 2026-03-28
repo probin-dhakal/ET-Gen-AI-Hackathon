@@ -632,7 +632,34 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
             </div>
           </div>
 
-          {/* 4. Related News - Rich Numbered List with Visual Elements */}
+          {/* 4. Story Arc Tracker */}
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-[#cc0000] to-red-700 text-white border-b border-red-600 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Activity size={20} className="text-[#cc0000]" />
+                <h2 className="font-bold text-base uppercase tracking-wide text-[#cc0000]">Story Arc Tracker</h2>
+              </div>
+              <Link to="/story" className="text-red-100 hover:text-white transition-colors">
+                <Maximize size={18} />
+              </Link>
+            </div>
+            <div className="p-5">
+              <ul className="space-y-4 border-l-3 border-red-200 ml-2 pl-4">
+                <li className="relative">
+                  <span className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-[#cc0000] border-2 border-white shadow-md"></span>
+                  <div className="text-xs font-bold uppercase tracking-wider text-[#cc0000] mb-1">Now</div>
+                  <p className="text-sm text-gray-700 leading-relaxed">{article.title.substring(0, 50)}...</p>
+                </li>
+                <li className="relative">
+                  <span className="absolute -left-5 top-1.5 h-3 w-3 rounded-full bg-gray-300 border-2 border-white shadow-md"></span>
+                  <div className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">Predicted</div>
+                  <p className="text-sm text-gray-600 leading-relaxed">Regulatory impact assessment incoming.</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* 5. Related News - Rich Numbered List with Visual Elements */}
           <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
             <div className="px-5 py-4 bg-gradient-to-r from-[#cc0000] to-red-700 text-white border-b border-red-600">
               <h2 className="font-bold text-base uppercase tracking-wide">Related News</h2>

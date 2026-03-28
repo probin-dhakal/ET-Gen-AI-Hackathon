@@ -60,8 +60,8 @@ function Storyarc() {
                 {/* Header with Close Button */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h1 className="text-5xl font-bold text-gray-900">Story Arc Analysis</h1>
-                        <p className="text-base text-gray-500 mt-1">Track sentiment, perspectives, and predictions</p>
+                        <h1 className="text-5xl font-bold text-[#cc0000]">Story Arc Analysis</h1>
+                        <p className="text-base text-[#cc0000] mt-1">Track sentiment, perspectives, and predictions</p>
                     </div>
                     <button
                         onClick={() => navigate(-1)}
@@ -79,7 +79,7 @@ function Storyarc() {
                             onClick={() => setActiveTab('timeline')}
                             className={`px-6 py-3 font-semibold text-base flex items-center gap-2 transition-colors border-b-2 ${
                                 activeTab === 'timeline'
-                                    ? 'text-blue-600 border-b-blue-600'
+                                    ? 'text-[#cc0000] border-b-[#cc0000]'
                                     : 'text-gray-600 hover:text-gray-900 border-b-transparent'
                             }`}
                         >
@@ -90,7 +90,7 @@ function Storyarc() {
                             onClick={() => setActiveTab('sentiment')}
                             className={`px-6 py-3 font-semibold text-base flex items-center gap-2 transition-colors border-b-2 ${
                                 activeTab === 'sentiment'
-                                    ? 'text-blue-600 border-b-blue-600'
+                                    ? 'text-[#cc0000] border-b-[#cc0000]'
                                     : 'text-gray-600 hover:text-gray-900 border-b-transparent'
                             }`}
                         >
@@ -101,7 +101,7 @@ function Storyarc() {
                             onClick={() => setActiveTab('contrarian')}
                             className={`px-6 py-3 font-semibold text-base flex items-center gap-2 transition-colors border-b-2 ${
                                 activeTab === 'contrarian'
-                                    ? 'text-blue-600 border-b-blue-600'
+                                    ? 'text-[#cc0000] border-b-[#cc0000]'
                                     : 'text-gray-600 hover:text-gray-900 border-b-transparent'
                             }`}
                         >
@@ -112,7 +112,7 @@ function Storyarc() {
                             onClick={() => setActiveTab('watchNext')}
                             className={`px-6 py-3 font-semibold text-base flex items-center gap-2 transition-colors border-b-2 ${
                                 activeTab === 'watchNext'
-                                    ? 'text-blue-600 border-b-blue-600'
+                                    ? 'text-[#cc0000] border-b-[#cc0000]'
                                     : 'text-gray-600 hover:text-gray-900 border-b-transparent'
                             }`}
                         >
@@ -141,6 +141,15 @@ function Storyarc() {
                     {/* Sentiment Tab */}
                     {activeTab === 'sentiment' && (
                         <div>
+                            {/* Info Box about Shift Score */}
+                            <div className="mb-4 p-4 bg-[#cc0000]/10 border border-[#cc0000]/10 rounded-lg flex gap-3">
+                                <AlertCircle size={20} className="text-[#cc0000] flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-sm font-semibold text-[#cc0000] mb-1">What is Shift Score?</p>
+                                    <p className="text-sm text-[#cc0000]">Shift Score measures the magnitude of sentiment change from previous period to current. Range: -100 to +100 (or -1.0 to +1.0 in decimal), where -100/-1.0 indicates extreme negative shift and +100/+1.0 indicates extreme positive shift. Calculated based on article tone, language intensity, and context changes.</p>
+                                </div>
+                            </div>
+
                             {loadingStoryIntelligence && (
                                 <p className="text-sm text-gray-500 p-4">Analyzing sentiment...</p>
                             )}
@@ -246,7 +255,6 @@ function Storyarc() {
                                     <div key={index} className="rounded-lg p-4 bg-gray-50 border-l-4 border-l-purple-500">
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <p className="text-base font-semibold text-gray-900 flex-1 leading-relaxed">{truncateText(item.prediction, 300)}</p>
-                                            <span className="text-xs bg-purple-200 text-purple-800 px-3 py-1 rounded-full font-bold whitespace-nowrap">{item.probability}</span>
                                         </div>
                                         <p className="text-sm text-gray-600 font-medium mb-3">Horizon: {item.horizon}</p>
                                         {(item.watch_signals || []).length > 0 && (
