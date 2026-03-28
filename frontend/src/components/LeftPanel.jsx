@@ -205,32 +205,60 @@ const LeftPanel = ({ onArticleClick }) => {
         </div>
       </div>
 
-      {/* Must Read Section */}
+      {/* Must Read / Editor's Pick Section */}
       {loadingMustRead === false && mustReadArticles.length > 0 && (
-        <div className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 border-l-4 border-blue-600 rounded">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="bg-blue-600 text-white px-2 py-1 text-xs font-bold rounded">EDITOR'S PICK</div>
-            <h3 className="font-bold text-sm text-blue-700">Must Read</h3>
+        <div className="mt-6 bg-white border border-gray-100 rounded-lg overflow-hidden">
+          {/* Category Header */}
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="font-serif font-bold text-2xl text-gray-900">Editor's Pick <span className="text-red-600 ml-1">›</span></h2>
           </div>
-          <div className="space-y-2">
-            {mustReadArticles.map((article, index) => (
-              <button
-                key={index}
-                onClick={() => handleArticleClick(article, index)}
-                className="w-full text-left p-2 bg-white rounded hover:bg-blue-100 transition-colors group border border-blue-200 hover:border-blue-400"
-              >
-                <div className="flex items-start gap-2">
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
-                    {index + 1}
+          
+          {/* Featured Article */}
+          {mustReadArticles[0] && (
+            <button
+              onClick={() => handleArticleClick(mustReadArticles[0], 0)}
+              className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+            >
+              {mustReadArticles[0].urlToImage && (
+                <img 
+                  src={mustReadArticles[0].urlToImage} 
+                  alt={mustReadArticles[0].title}
+                  className="w-full h-48 object-cover"
+                />
+              )}
+              <div className="p-4">
+                <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                  {mustReadArticles[0].title}
+                </h3>
+              </div>
+            </button>
+          )}
+
+          {/* Other Articles List */}
+          {mustReadArticles.length > 1 && (
+            <div className="divide-y divide-gray-100">
+              {mustReadArticles.slice(1, 4).map((article, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleArticleClick(article, idx + 1)}
+                  className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                >
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                      {article.title}
+                    </h3>
                   </div>
-                  <div className="flex-grow min-w-0">
-                    <p className="text-xs font-semibold text-blue-700 group-hover:text-blue-900">{article.author}</p>
-                    <p className="font-semibold text-sm text-gray-900 line-clamp-2 mt-0.5 group-hover:text-blue-700">{article.title}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                  {article.urlToImage && (
+                    <img 
+                      src={article.urlToImage} 
+                      alt={article.title}
+                      className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

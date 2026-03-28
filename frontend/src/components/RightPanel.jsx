@@ -53,9 +53,23 @@ const RightPanel = () => {
         const response = await axiosInstance.get('/api/keywords');
         const keywords = response.data?.keywords || [];
         
-        // Randomize keywords to avoid showing only health-related ones
-        const randomized = [...keywords].sort(() => Math.random() - 0.5);
-        setAllKeywords(randomized);
+        // Sort by article count (most articles first), then randomize within groups
+        const sorted = [...keywords].sort((a, b) => {
+          // First sort by article count descending
+          if (b.article_count !== a.article_count) {
+            return b.article_count - a.article_count;
+          }
+          // If same article count, randomize
+          return Math.random() - 0.5;
+        });
+        
+        // Add slight randomization to shuffle keywords in similar count groups
+        const shuffled = sorted.map((keyword, index) => ({
+          ...keyword,
+          _sortKey: index + (Math.random() * 0.3) // Add random factor for subtle shuffling
+        })).sort((a, b) => a._sortKey - b._sortKey).map(({ _sortKey, ...keyword }) => keyword);
+        
+        setAllKeywords(shuffled);
       } catch (err) {
         console.error('Error fetching keywords:', err);
         setKeywordError('Unable to load keywords');
@@ -193,9 +207,7 @@ const RightPanel = () => {
                   className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white hover:from-gray-100 hover:to-gray-50 transition-all border-b border-gray-100"
                 >
                   <div className="flex items-center gap-3 flex-1 text-left">
-                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold ${
-                      idx % 5 === 0 ? 'bg-red-500' : idx % 5 === 1 ? 'bg-blue-500' : idx % 5 === 2 ? 'bg-green-500' : idx % 5 === 3 ? 'bg-purple-500' : 'bg-orange-500'
-                    }`}>
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold bg-[#cc0000]">
                       {idx + 1}
                     </div>
                     <div className="flex-1">

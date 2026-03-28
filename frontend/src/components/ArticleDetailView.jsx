@@ -42,6 +42,26 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
   const [loadingFallback, setLoadingFallback] = useState(false);
   const [isFullContent, setIsFullContent] = useState(false);
 
+  // --- Category News States ---
+  const [categoryNews, setCategoryNews] = useState({
+    world: [],
+    business: [],
+    technology: [],
+    healthcare: [],
+    india: [],
+    education: [],
+    environment: []
+  });
+  const [loadingCategoryNews, setLoadingCategoryNews] = useState({
+    world: false,
+    business: false,
+    technology: false,
+    healthcare: false,
+    india: false,
+    education: false,
+    environment: false
+  });
+
   // --- 🎥 Video Generation States ---
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState(null);
@@ -293,6 +313,45 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
     fetchTranslation();
   }, [activeLanguage, article_id]);
 
+  // Fetch categorized news
+  useEffect(() => {
+    const fetchCategoryNews = async () => {
+      const categories = ['world', 'business', 'technology', 'healthcare', 'india', 'education', 'environment'];
+      const newCategoryNews = { ...categoryNews };
+
+      for (const category of categories) {
+        try {
+          setLoadingCategoryNews(prev => ({ ...prev, [category]: true }));
+          const response = await axiosInstance.get(`/api/articles/category/${category}`, {
+            params: { limit: 3 }
+          });
+          
+          const articles = response.data?.articles || [];
+          const enriched = await Promise.all(
+            articles.map(async (item) => ({
+              article_id: item.id,
+              title: item.heading,
+              summary: item.nucleus_summary || '',
+              urlToImage: await fetchImageFromPexels(item.heading),
+              publishedAt: item.published_at
+            }))
+          );
+          
+          newCategoryNews[category] = enriched;
+        } catch (err) {
+          console.error(`Error fetching ${category} news:`, err);
+          newCategoryNews[category] = [];
+        } finally {
+          setLoadingCategoryNews(prev => ({ ...prev, [category]: false }));
+        }
+      }
+      
+      setCategoryNews(newCategoryNews);
+    };
+
+    fetchCategoryNews();
+  }, [article_id]);
+
   // Fetch article image from Pexels
   useEffect(() => {
     if (!article?.title) return;
@@ -494,31 +553,36 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
         {/* RIGHT COLUMN: Sidebar - Professional News Layout */}
         <div className="col-span-1 md:col-span-4 space-y-6">
           
-          {/* 1. Language Selector - Featured Card */}
-          <div className="bg-gradient-to-br from-white to-gray-50 px-5 py-4 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-3">Read in Your Language</label>
-            <select 
-              value={activeLanguage} 
-              onChange={(e) => setActiveLanguage(e.target.value)} 
-              className="w-full p-3 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#cc0000] focus:ring-opacity-50 focus:border-[#cc0000] bg-white cursor-pointer hover:border-gray-300 transition"
-            >
-              {['English', 'Hindi', 'Tamil', 'Telugu', 'Bengali', 'Assamese'].map(lang => (
-                <option key={lang} value={lang} className="font-medium">
-                  {lang}
-                </option>
-              ))}
-            </select>
+          {/* 1. Language Selector - Red Card with Related News Style */}
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-[#cc0000] to-red-700 text-white border-b border-red-600">
+              <h2 className="font-bold text-base uppercase tracking-wide">Read in Your Language</h2>
+              <p className="text-xs text-red-100 mt-0.5">Choose your preferred language</p>
+            </div>
+            <div className="px-5 py-4">
+              <select 
+                value={activeLanguage} 
+                onChange={(e) => setActiveLanguage(e.target.value)} 
+                className="w-full p-3 text-sm font-medium text-gray-900 border-2 border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#cc0000] focus:ring-opacity-50 focus:border-[#cc0000] bg-white cursor-pointer hover:border-red-300 transition"
+              >
+                {['English', 'Hindi', 'Tamil', 'Telugu', 'Bengali', 'Assamese'].map(lang => (
+                  <option key={lang} value={lang} className="font-medium">
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* 2. Ask About Article */}
           <button 
             onClick={() => setIsNewsNavigatorOpen(true)} 
-            className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:shadow-md transition-all duration-200 group"
+            className="w-full flex items-center gap-3 p-5 bg-[#cc0000] rounded-lg border-2 border-[#cc0000] hover:bg-red-700 hover:shadow-lg transition-all duration-200 group"
           >
-            <MessageSquare size={18} className="text-blue-600 flex-shrink-0" />
+            <MessageSquare size={24} className="text-white flex-shrink-0" />
             <div className="text-left min-w-0">
-              <h3 className="font-bold text-sm text-blue-900 group-hover:text-blue-700 transition">Ask AI Questions</h3>
-              <p className="text-xs text-blue-700">Deep dive on this article →</p>
+              <h3 className="font-bold text-base text-white group-hover:text-white transition">Ask AI Questions</h3>
+              <p className="text-sm text-red-100">Deep dive on this article →</p>
             </div>
           </button>
 
@@ -575,22 +639,28 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
               <p className="text-xs text-red-100 mt-0.5">Top stories right now</p>
             </div>
             <div className="divide-y divide-gray-100">
-              {relatedArticleList?.slice(0, 5).map((item, idx) => (
-                <button
-                  key={`${item.article_id}-${idx}`}
-                  onClick={() => handleRelatedClick(item.article_id)}
-                  className="w-full text-left px-5 py-4 hover:bg-red-50 transition-colors duration-200 group flex gap-4 items-start active:bg-red-100"
-                >
-                  <div className="flex-shrink-0 flex items-start">
-                    <span className="text-[32px] font-black text-red-200 leading-tight group-hover:text-[#cc0000] transition-colors">{idx + 1}</span>
-                  </div>
-                  <div className="flex-1 min-w-0 pt-1">
-                    <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#cc0000] transition-colors line-clamp-2 leading-tight">
-                      {item.title}
-                    </h3>
-                  </div>
-                </button>
-              ))}
+              {relatedArticleList?.length > 0 ? (
+                relatedArticleList.slice(0, 5).map((item, idx) => (
+                  <button
+                    key={`${item.article_id}-${idx}`}
+                    onClick={() => handleRelatedClick(item.article_id)}
+                    className="w-full text-left px-5 py-4 hover:bg-red-50 transition-colors duration-200 group flex gap-4 items-start active:bg-red-100"
+                  >
+                    <div className="flex-shrink-0 flex items-start">
+                      <span className="text-[32px] font-black text-red-200 leading-tight group-hover:text-[#cc0000] transition-colors">{idx + 1}</span>
+                    </div>
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#cc0000] transition-colors line-clamp-2 leading-tight">
+                        {item.title}
+                      </h3>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="px-5 py-8 text-center">
+                  <p className="text-sm text-gray-500">No related news found</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -668,6 +738,376 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
               )}
             </div>
           </div>
+
+          {/* Category News Sections - New Design */}
+          {/* World News */}
+          {categoryNews.world?.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              {/* Category Header */}
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-serif font-bold text-2xl text-gray-900">World <span className="text-red-600 ml-1">›</span></h2>
+              </div>
+              
+              {/* Featured Article */}
+              {categoryNews.world[0] && (
+                <button
+                  onClick={() => handleRelatedClick(categoryNews.world[0].article_id)}
+                  className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {categoryNews.world[0].urlToImage && (
+                    <img 
+                      src={categoryNews.world[0].urlToImage} 
+                      alt={categoryNews.world[0].title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                      {categoryNews.world[0].title}
+                    </h3>
+                  </div>
+                </button>
+              )}
+
+              {/* Other Articles List */}
+              {categoryNews.world.length > 1 && (
+                <div className="divide-y divide-gray-100">
+                  {categoryNews.world.slice(1, 4).map((item, idx) => (
+                    <button
+                      key={`world-${item.article_id}-${idx}`}
+                      onClick={() => handleRelatedClick(item.article_id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                          {item.title}
+                        </h3>
+                      </div>
+                      {item.urlToImage && (
+                        <img 
+                          src={item.urlToImage} 
+                          alt={item.title}
+                          className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Business News */}
+          {categoryNews.business?.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-serif font-bold text-2xl text-gray-900">Business <span className="text-red-600 ml-1">›</span></h2>
+              </div>
+              {categoryNews.business[0] && (
+                <button
+                  onClick={() => handleRelatedClick(categoryNews.business[0].article_id)}
+                  className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {categoryNews.business[0].urlToImage && (
+                    <img 
+                      src={categoryNews.business[0].urlToImage} 
+                      alt={categoryNews.business[0].title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                      {categoryNews.business[0].title}
+                    </h3>
+                  </div>
+                </button>
+              )}
+              {categoryNews.business.length > 1 && (
+                <div className="divide-y divide-gray-100">
+                  {categoryNews.business.slice(1, 4).map((item, idx) => (
+                    <button
+                      key={`business-${item.article_id}-${idx}`}
+                      onClick={() => handleRelatedClick(item.article_id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                          {item.title}
+                        </h3>
+                      </div>
+                      {item.urlToImage && (
+                        <img 
+                          src={item.urlToImage} 
+                          alt={item.title}
+                          className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Technology News */}
+          {categoryNews.technology?.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-serif font-bold text-2xl text-gray-900">Technology <span className="text-red-600 ml-1">›</span></h2>
+              </div>
+              {categoryNews.technology[0] && (
+                <button
+                  onClick={() => handleRelatedClick(categoryNews.technology[0].article_id)}
+                  className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {categoryNews.technology[0].urlToImage && (
+                    <img 
+                      src={categoryNews.technology[0].urlToImage} 
+                      alt={categoryNews.technology[0].title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                      {categoryNews.technology[0].title}
+                    </h3>
+                  </div>
+                </button>
+              )}
+              {categoryNews.technology.length > 1 && (
+                <div className="divide-y divide-gray-100">
+                  {categoryNews.technology.slice(1, 4).map((item, idx) => (
+                    <button
+                      key={`technology-${item.article_id}-${idx}`}
+                      onClick={() => handleRelatedClick(item.article_id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                          {item.title}
+                        </h3>
+                      </div>
+                      {item.urlToImage && (
+                        <img 
+                          src={item.urlToImage} 
+                          alt={item.title}
+                          className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* India News */}
+          {categoryNews.india?.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-serif font-bold text-2xl text-gray-900">India <span className="text-red-600 ml-1">›</span></h2>
+              </div>
+              {categoryNews.india[0] && (
+                <button
+                  onClick={() => handleRelatedClick(categoryNews.india[0].article_id)}
+                  className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {categoryNews.india[0].urlToImage && (
+                    <img 
+                      src={categoryNews.india[0].urlToImage} 
+                      alt={categoryNews.india[0].title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                      {categoryNews.india[0].title}
+                    </h3>
+                  </div>
+                </button>
+              )}
+              {categoryNews.india.length > 1 && (
+                <div className="divide-y divide-gray-100">
+                  {categoryNews.india.slice(1, 4).map((item, idx) => (
+                    <button
+                      key={`india-${item.article_id}-${idx}`}
+                      onClick={() => handleRelatedClick(item.article_id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                          {item.title}
+                        </h3>
+                      </div>
+                      {item.urlToImage && (
+                        <img 
+                          src={item.urlToImage} 
+                          alt={item.title}
+                          className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Education News */}
+          {categoryNews.education?.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-serif font-bold text-2xl text-gray-900">Education <span className="text-red-600 ml-1">›</span></h2>
+              </div>
+              {categoryNews.education[0] && (
+                <button
+                  onClick={() => handleRelatedClick(categoryNews.education[0].article_id)}
+                  className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {categoryNews.education[0].urlToImage && (
+                    <img 
+                      src={categoryNews.education[0].urlToImage} 
+                      alt={categoryNews.education[0].title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                      {categoryNews.education[0].title}
+                    </h3>
+                  </div>
+                </button>
+              )}
+              {categoryNews.education.length > 1 && (
+                <div className="divide-y divide-gray-100">
+                  {categoryNews.education.slice(1, 4).map((item, idx) => (
+                    <button
+                      key={`education-${item.article_id}-${idx}`}
+                      onClick={() => handleRelatedClick(item.article_id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                          {item.title}
+                        </h3>
+                      </div>
+                      {item.urlToImage && (
+                        <img 
+                          src={item.urlToImage} 
+                          alt={item.title}
+                          className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Environment News */}
+          {categoryNews.environment?.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-serif font-bold text-2xl text-gray-900">Environment <span className="text-red-600 ml-1">›</span></h2>
+              </div>
+              {categoryNews.environment[0] && (
+                <button
+                  onClick={() => handleRelatedClick(categoryNews.environment[0].article_id)}
+                  className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {categoryNews.environment[0].urlToImage && (
+                    <img 
+                      src={categoryNews.environment[0].urlToImage} 
+                      alt={categoryNews.environment[0].title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                      {categoryNews.environment[0].title}
+                    </h3>
+                  </div>
+                </button>
+              )}
+              {categoryNews.environment.length > 1 && (
+                <div className="divide-y divide-gray-100">
+                  {categoryNews.environment.slice(1, 4).map((item, idx) => (
+                    <button
+                      key={`environment-${item.article_id}-${idx}`}
+                      onClick={() => handleRelatedClick(item.article_id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                          {item.title}
+                        </h3>
+                      </div>
+                      {item.urlToImage && (
+                        <img 
+                          src={item.urlToImage} 
+                          alt={item.title}
+                          className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Healthcare News */}
+          {categoryNews.healthcare?.length > 0 && (
+            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <h2 className="font-serif font-bold text-2xl text-gray-900">Healthcare <span className="text-red-600 ml-1">›</span></h2>
+              </div>
+              {categoryNews.healthcare[0] && (
+                <button
+                  onClick={() => handleRelatedClick(categoryNews.healthcare[0].article_id)}
+                  className="w-full text-left border-b border-gray-100 overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {categoryNews.healthcare[0].urlToImage && (
+                    <img 
+                      src={categoryNews.healthcare[0].urlToImage} 
+                      alt={categoryNews.healthcare[0].title}
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif font-bold text-lg text-gray-900 line-clamp-3">
+                      {categoryNews.healthcare[0].title}
+                    </h3>
+                  </div>
+                </button>
+              )}
+              {categoryNews.healthcare.length > 1 && (
+                <div className="divide-y divide-gray-100">
+                  {categoryNews.healthcare.slice(1, 4).map((item, idx) => (
+                    <button
+                      key={`healthcare-${item.article_id}-${idx}`}
+                      onClick={() => handleRelatedClick(item.article_id)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-3 active:bg-gray-100"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-serif font-semibold text-sm text-gray-900 group-hover:text-gray-600 transition-colors line-clamp-3">
+                          {item.title}
+                        </h3>
+                      </div>
+                      {item.urlToImage && (
+                        <img 
+                          src={item.urlToImage} 
+                          alt={item.title}
+                          className="w-20 h-20 object-cover rounded flex-shrink-0 shadow-sm"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </div>

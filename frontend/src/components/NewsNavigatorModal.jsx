@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useArticleStore } from "../store/useArticle";
 import { ArrowRight, ArrowUp, Loader2, Sparkles, X } from "lucide-react";
 
 const NewsNavigatorModal = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
     const {
         getBriefing,
         briefing,
@@ -22,6 +24,7 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
     const [chatMessages, setChatMessages] = useState([]);
     const [loadingFollowUp, setLoadingFollowUp] = useState(false);
     const chatEndRef = useRef(null);
+    const briefingRef = useRef(null);
 
     const suggestedQuestions = useMemo(() => {
         // Suggestions for article-specific questions
@@ -75,10 +78,6 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
         if (!isOpen || !article_id) return;
         getRelatedArticles();
     }, [isOpen, article_id, getRelatedArticles]);
-
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [chatMessages, loadingFollowUp]);
     
     const handleFollowUpQuestion = async (questionOverride) => {
         const userQuestion = (questionOverride || followUpQuestion).trim();
@@ -166,6 +165,11 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
         await handleFollowUpQuestion(question);
     };
 
+    const handleRelatedArticleClick = (articleId, article) => {
+        onClose();
+        navigate(`/article/${articleId}`, { state: { article } });
+    };
+
     const modalRelatedArticles =
         relatedArticles && relatedArticles.length > 0
             ? relatedArticles.map((item) => ({
@@ -211,7 +215,7 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
                         )}
 
                         {!loadingBriefing && briefing && briefingArticleId === article_id && (
-                            <>
+                            <div ref={briefingRef}>
                                 {showBriefingSummary && (
                                     <p className="text-base md:text-2xl leading-normal text-black whitespace-pre-line mb-6">
                                         {briefing.response_summary}
@@ -228,7 +232,7 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
                                         ))}
                                     </ul>
                                 )}
-                            </>
+                            </div>
                         )}
 
                         {chatMessages.map((message) => {
@@ -256,13 +260,15 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
                         })}
 
                         {loadingFollowUp && (
-                            <div className="mb-4 inline-flex items-center gap-3 rounded-2xl border border-gray-300 bg-white px-5 py-4 text-xs md:text-base text-gray-600">
-                                <Loader2 size={18} className="animate-spin text-[#cf1020]" />
-                                Analyzing your question...
+                            <div className="mb-4 text-left">
+                                <div className="inline-flex items-center gap-3 rounded-2xl border border-gray-300 bg-white px-5 py-4 text-xs md:text-base text-gray-600">
+                                    <Loader2 size={18} className="animate-spin text-[#cf1020]" />
+                                    <span>Analyzing your question...</span>
+                                </div>
                             </div>
                         )}
 
-
+                        <div ref={chatEndRef} className="h-1" />
 
                         <div className="mt-10">
                             {suggestedQuestions.map((question) => (
@@ -295,7 +301,7 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
                                     disabled={loadingFollowUp || !followUpQuestion.trim() || !article_id}
                                     className="h-12 w-12 min-w-12 rounded-full bg-[#cf1020] text-white inline-flex items-center justify-center disabled:opacity-50"
                                 >
-                                    {loadingFollowUp ? <Loader2 size={22} className="animate-spin" /> : <ArrowUp size={22} />}
+                                    <ArrowUp size={22} />
                                 </button>
                             </div>
                         </div>
@@ -311,15 +317,19 @@ const NewsNavigatorModal = ({ isOpen, onClose }) => {
                             ) : modalRelatedArticles && modalRelatedArticles.length > 0 ? (
                                 <div className="space-y-3">
                                     {modalRelatedArticles.slice(0, 4).map((item) => (
-                                        <div key={item.article_id} className="rounded-2xl border border-gray-300 bg-white px-4 py-3">
-                                            <p className="text-sm md:text-base font-semibold text-black leading-snug">{item.title}</p>
+                                        <button
+                                            key={item.article_id}
+                                            onClick={() => handleRelatedArticleClick(item.article_id, item)}
+                                            className="w-full text-left rounded-2xl border border-gray-300 bg-white px-4 py-3 hover:border-[#cf1020] hover:bg-red-50 transition-all duration-200 group cursor-pointer"
+                                        >
+                                            <p className="text-sm md:text-base font-semibold text-black leading-snug group-hover:text-[#cf1020] transition-colors">{item.title}</p>
                                             {item.summary && (
                                                 <p className="mt-1 text-xs md:text-sm text-gray-600 line-clamp-2">{item.summary}</p>
                                             )}
                                             {item.date && (
                                                 <p className="mt-2 text-xs text-gray-500">{new Date(item.date).toLocaleDateString()}</p>
                                             )}
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                             ) : (
