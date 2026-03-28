@@ -518,13 +518,13 @@ def get_translation(article_id: int, language: str):
         language = language.lower()
         print(language)
         # Step 1: Check cache
-        cached_translation = db.get_translation(article_id, language)
-        if cached_translation:
-            return {
-                "status": "cached",
-                "source": "database",
-                "translation": cached_translation
-            }
+        # cached_translation = db.get_translation(article_id, language)
+        # if cached_translation:
+        #     return {
+        #         "status": "cached",
+        #         "source": "database",
+        #         "translation": cached_translation
+        #     }
         
         # Step 2: Get article from database
         article = db.get_full_article(article_id)
@@ -537,9 +537,11 @@ def get_translation(article_id: int, language: str):
         translated_article = translator.translate_article(
             article_heading=article.get('heading', ''),
             article_body=article.get('body', ''),
+            nucleus_summary=article.get('nucleus_summary', ''),
             language=language
         )
-        # print(translated_article)
+
+        print(translated_article)
         
         # Convert to dict for JSON serialization
         if hasattr(translated_article, 'to_dict'):

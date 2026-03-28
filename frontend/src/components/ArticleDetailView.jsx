@@ -40,6 +40,7 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
   const [loadingImage, setLoadingImage] = useState(true);
   const [fallbackArticles, setFallbackArticles] = useState([]);
   const [loadingFallback, setLoadingFallback] = useState(false);
+  const [isFullContent, setIsFullContent] = useState(false);
 
   // --- 🎥 Video Generation States ---
   const [isVideoLoading, setIsVideoLoading] = useState(false);
@@ -52,6 +53,93 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
   const stripNewsApiTruncation = (text) => text.replace(/\s*\[\+\d+\s+chars\]\s*$/, '');
   const cleanDescription = stripNewsApiTruncation(description).trim();
   const cleanContent = stripNewsApiTruncation(content).trim();
+
+  // Helper function to break content into random-sized paragraphs
+  const getRandomizedParagraphs = (text) => {
+    if (!text) return [];
+    
+    // Split by sentence endings, creating logical breaks
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    const paragraphs = [];
+    let currentParagraph = '';
+    let sentenceCount = 0;
+    
+    // Randomly group sentences into paragraphs of varying sizes (2-5 sentences per paragraph)
+    for (let i = 0; i < sentences.length; i++) {
+      currentParagraph += sentences[i];
+      sentenceCount++;
+      
+      // Ensure minimum 2 sentences before considering a break, then randomly decide
+      // Use higher threshold (60%+) to create substantial paragraphs
+      const minSentences = 2;
+      const shouldBreak = sentenceCount >= minSentences && (Math.random() > 0.55 || i === sentences.length - 1);
+      
+      if (shouldBreak && currentParagraph.trim()) {
+        paragraphs.push(currentParagraph.trim());
+        currentParagraph = '';
+        sentenceCount = 0;
+      }
+    }
+    
+    if (currentParagraph.trim()) {
+      paragraphs.push(currentParagraph.trim());
+    }
+    
+    return paragraphs;
+  };
+
+  // Helper function to format translated content into paragraphs
+  const getTranslatedParagraphs = (text) => {
+    if (!text) return [];
+    
+    // First check if content has paragraph markers (double newlines)
+    const explicitParagraphs = text.split(/\n\n+/).filter(p => p.trim());
+    if (explicitParagraphs.length > 1) {
+      return explicitParagraphs.map(p => p.trim());
+    }
+    
+    // Fallback: split by sentence endings (supporting multiple punctuation marks including Devanagari)
+    const sentences = text.match(/[^.!?।]+[.!?।]+/g) || [text];
+    const paragraphs = [];
+    let currentParagraph = '';
+    let sentenceCount = 0;
+    
+    // Group sentences into paragraphs (3-5 sentences for translated content)
+    for (let i = 0; i < sentences.length; i++) {
+      currentParagraph += sentences[i];
+      sentenceCount++;
+      
+      const minSentences = 2;
+      const shouldBreak = sentenceCount >= minSentences && (Math.random() > 0.5 || i === sentences.length - 1);
+      
+      if (shouldBreak && currentParagraph.trim()) {
+        paragraphs.push(currentParagraph.trim());
+        currentParagraph = '';
+        sentenceCount = 0;
+      }
+    }
+    
+    if (currentParagraph.trim()) {
+      paragraphs.push(currentParagraph.trim());
+    }
+    
+    return paragraphs;
+  };
+
+  // Helper function to truncate content after 700 words
+  const getTruncatedContent = (text, wordLimit = 500) => {
+    if (!text) return '';
+    
+    const words = text.split(/\s+/);
+    if (words.length <= wordLimit) return text;
+    
+    return words.slice(0, wordLimit).join(' ') + '...';
+  };
+
+  // Check if content needs "Read More" button
+  const contentWordCount = cleanContent.split(/\s+/).length;
+  const needsReadMore = contentWordCount > 500 && !isFullContent;
+
 
   const shouldShowDescription = Boolean(cleanDescription);
   const isVernacularSelected = activeLanguage !== 'English';
@@ -249,7 +337,9 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
             </h1>
             {shouldShowDescription && (
               <p className="text-lg text-gray-700 leading-relaxed font-medium border-l-4 border-[#cc0000] pl-4">
-                {cleanDescription}
+                {hasTranslatedContent && translatedArticle.translated_nucleus_summary 
+                  ? translatedArticle.translated_nucleus_summary 
+                  : cleanDescription}
               </p>
             )}
           </div>
@@ -270,16 +360,64 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
             
             {hasTranslatedContent ? (
               <>
-                <p>{translatedArticle.translated_body}</p>
+                <div className="space-y-5">
+                  {getTranslatedParagraphs(translatedArticle.translated_body).map((paragraph, idx) => (
+                    <p key={idx} className="text-gray-800 leading-relaxed">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+                
                 {translatedArticle.local_context && (
-                  <div className="bg-red-50 p-4 border border-[#cc0000] rounded">
+                  <div className="bg-red-50 p-4 border border-[#cc0000] rounded mt-6">
                     <p className="text-xs font-bold uppercase text-[#cc0000] mb-2">Local Context</p>
-                    <p>{translatedArticle.local_context}</p>
+                    <p className="text-gray-800 leading-relaxed">{translatedArticle.local_context}</p>
                   </div>
                 )}
               </>
             ) : (
-              <p>{cleanContent || "Full content unavailable."}</p>
+              <>
+                <div className="space-y-5">
+                  {getRandomizedParagraphs(
+                    needsReadMore ? getTruncatedContent(cleanContent) : cleanContent
+                  ).map((paragraph, idx) => (
+                    <p key={idx} className="text-gray-800 leading-relaxed">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+
+                {/* Read More Button */}
+                {needsReadMore && (
+                  <button
+                    onClick={() => setIsFullContent(true)}
+                    className="mt-6 px-6 py-2 bg-[#cc0000] text-white font-semibold rounded-lg hover:bg-[#aa0000] transition-colors"
+                  >
+                    Read More
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Also Read Section */}
+            {relatedArticles?.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-sm font-bold text-gray-600 mb-3">Also read:</p>
+                <div className="space-y-3">
+                  {relatedArticles.slice(0, 2).map((rel, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleRelatedClick(rel.article_id)}
+                      className="flex items-start gap-3 text-left hover:opacity-80 transition-opacity group"
+                    >
+                      <span className="text-blue-600 font-semibold text-sm mt-0.5 flex-shrink-0">•</span>
+                      <span className="text-blue-600 hover:text-blue-800 underline text-sm font-semibold line-clamp-2 group-hover:no-underline">
+                        {rel.title}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
@@ -353,204 +491,180 @@ const ArticleDetailView = ({ article, onBack, activeLanguage, setActiveLanguage 
           )}
         </div>
 
-        {/* RIGHT COLUMN: AI Sidebar */}
-        <div className="col-span-1 md:col-span-4 space-y-8">
+        {/* RIGHT COLUMN: Sidebar - Professional News Layout */}
+        <div className="col-span-1 md:col-span-4 space-y-6">
           
-          {/* 1. AI Navigator Button */}
+          {/* 1. Language Selector - Featured Card */}
+          <div className="bg-gradient-to-br from-white to-gray-50 px-5 py-4 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block mb-3">Read in Your Language</label>
+            <select 
+              value={activeLanguage} 
+              onChange={(e) => setActiveLanguage(e.target.value)} 
+              className="w-full p-3 text-sm font-medium text-gray-900 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#cc0000] focus:ring-opacity-50 focus:border-[#cc0000] bg-white cursor-pointer hover:border-gray-300 transition"
+            >
+              {['English', 'Hindi', 'Tamil', 'Telugu', 'Bengali', 'Assamese'].map(lang => (
+                <option key={lang} value={lang} className="font-medium">
+                  {lang}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2. Ask About Article */}
           <button 
             onClick={() => setIsNewsNavigatorOpen(true)} 
-            className="w-full flex items-center justify-between p-4 bg-blue-50 border-2 border-[#cc0000] rounded-lg shadow-sm hover:bg-blue-100 transition-all"
+            className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 hover:border-blue-400 hover:shadow-md transition-all duration-200 group"
           >
-            <div className="flex items-center space-x-3">
-              <MessageSquare size={20} className="text-[#cc0000]" />
-              <div className="text-left">
-                <h2 className="font-bold text-sm uppercase">AI News Navigator</h2>
-                <p className="text-xs text-gray-600">Deep dive with AI Q&A</p>
-              </div>
+            <MessageSquare size={18} className="text-blue-600 flex-shrink-0" />
+            <div className="text-left min-w-0">
+              <h3 className="font-bold text-sm text-blue-900 group-hover:text-blue-700 transition">Ask AI Questions</h3>
+              <p className="text-xs text-blue-700">Deep dive on this article →</p>
             </div>
-            <span className="text-[#cc0000] font-bold text-xl">→</span>
           </button>
 
-          {/* 2. 🎬 AI Video Brief (Integrated with Azure Backend) */}
-          <div>
-            <div className="flex items-center space-x-2 mb-3">
-              <PlayCircle size={18} className="text-[#cc0000]" />
-              <h2 className="font-bold text-sm tracking-wider uppercase text-gray-500">AI Video Brief</h2>
-            </div>
-            
-            <div className="relative group overflow-hidden rounded-lg bg-black min-h-[200px] flex items-center justify-center border border-gray-200 shadow-inner">
+          {/* 3. AI Video Brief */}
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            <div className="relative group overflow-hidden bg-gradient-to-br from-purple-900 to-indigo-900 h-[180px] flex items-center justify-center cursor-pointer"
+              onClick={!isVideoLoading ? handleGenerateVideo : null}>
               {videoUrl ? (
                 <video 
                   src={videoUrl} 
                   controls 
                   autoPlay 
-                  className="w-full h-full object-contain rounded-lg" 
+                  className="w-full h-full object-contain" 
                 />
               ) : (
-                <div 
-                  onClick={!isVideoLoading ? handleGenerateVideo : null}
-                  className={`relative w-full h-[200px] flex items-center justify-center ${!isVideoLoading ? 'cursor-pointer' : 'cursor-wait'}`}
-                >
+                <>
                   <img 
-                    src={articleImage || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='225'%3E%3Cdefs%3E%3ClinearGradient id='grad2' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:rgb(139,92,246);stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:rgb(59,130,246);stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='225' fill='url(%23grad2)'/%3E%3Ctext x='50%25' y='50%25' font-size='36' fill='white' text-anchor='middle' dominant-baseline='middle' font-weight='bold'%3E▶%3C/text%3E%3C/svg%3E"} 
-                    className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-30 transition-opacity" 
+                    src={articleImage || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='225'%3E%3Cdefs%3E%3ClinearGradient id='grad2' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:rgb(139,92,246);stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:rgb(59,130,246);stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='225' fill='url(%23grad2)'/%3E%3C/svg%3E"} 
+                    className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-20 transition-opacity" 
                     alt="Thumbnail"
                   />
-                  <div className="relative z-10 flex flex-col items-center p-4">
+                  <div className="relative z-10 flex flex-col items-center">
                     {isVideoLoading ? (
                       <>
-                        <Loader2 size={44} className="text-white animate-spin mb-3" />
-                        <span className="text-white text-[10px] font-bold tracking-widest uppercase text-center">
-                          Rendering AI Brief...
-                        </span>
+                        <Loader2 size={36} className="text-white animate-spin" />
+                        <span className="text-white text-xs font-bold mt-3">Creating video...</span>
                       </>
                     ) : (
                       <>
-                        <div className="bg-white/10 p-3 rounded-full backdrop-blur-md mb-3">
-                          <PlayCircle size={44} className="text-white" />
+                        <div className="bg-[#cc0000]/80 p-3 rounded-full backdrop-blur-sm mb-3 group-hover:bg-[#cc0000] transition">
+                          <PlayCircle size={36} className="text-white" />
                         </div>
-                        <span className="text-white text-xs font-bold bg-[#cc0000] px-4 py-2 rounded-full shadow-lg hover:scale-105 transition-transform">
-                          GENERATE 60-SEC BRIEF
-                        </span>
+                        <span className="text-white text-xs font-bold uppercase tracking-wider">Generate 60-Sec Brief</span>
                       </>
                     )}
                   </div>
-                </div>
+                </>
               )}
               {videoError && (
-                <div className="absolute bottom-0 inset-x-0 bg-red-600/90 text-white text-[10px] p-2 text-center flex items-center justify-center gap-1">
-                  <AlertCircle size={12} /> {videoError}
+                <div className="absolute bottom-0 inset-x-0 bg-red-600/95 text-white text-xs p-2 text-center font-semibold">
+                  {videoError}
                 </div>
               )}
             </div>
-          </div>
-
-          {/* 3. Story Arc Tracker */}
-          <div className="relative bg-blue-50 p-4 border border-blue-100 rounded">
-            <Link to="/story" className="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
-              <Maximize size={18} />
-            </Link>
-            <div className="flex items-center space-x-2 mb-3">
-              <Activity size={18} className="text-[#cc0000]" />
-              <h2 className="font-bold text-sm uppercase">Story Arc</h2>
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 text-center">
+              <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">AI-Generated Video Summary</p>
             </div>
-            <ul className="space-y-3 border-l-2 border-blue-200 ml-2 pl-3 text-sm">
-              <li className="relative">
-                <span className="absolute -left-4.25 top-1.5 h-2 w-2 rounded-full bg-blue-500"></span>
-                <span className="font-semibold block">Now:</span> 
-                {article.title.substring(0, 45)}...
-              </li>
-              <li className="relative text-gray-500">
-                <span className="absolute -left-4.25 top-1.5 h-2 w-2 rounded-full bg-gray-300"></span>
-                <span className="font-semibold block">Predicted:</span> 
-                Regulatory impact assessment incoming.
-              </li>
-            </ul>
           </div>
 
-          {/* 4. Side List: Related Stories */}
-          <div className="bg-gray-50 p-4 border rounded">
-            <h2 className="font-bold text-sm uppercase text-gray-500 mb-3">Related</h2>
-            {loadingRelated ? (
-              <Loader2 className="animate-spin text-[#cc0000]" size={20} />
-            ) : (
-              <ul className="space-y-3">
-                {relatedArticleList?.slice(0, 4).map((item, idx) => (
-                  <li 
-                    key={idx} 
-                    onClick={() => handleRelatedClick(item.article_id)} 
-                    className="cursor-pointer hover:text-[#cc0000] text-sm font-semibold border-b border-gray-100 pb-2 last:border-none"
-                  >
-                    {item.title}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* 5. Vernacular Engine Selector */}
-          <div className="bg-red-50 p-4 border border-[#cc0000] rounded shadow-sm">
-            <div className="flex items-center space-x-2 mb-3">
-              <Globe size={18} className="text-[#cc0000]" />
-              <h2 className="font-bold text-sm">Vernacular Engine</h2>
+          {/* 4. Related News - Rich Numbered List with Visual Elements */}
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-[#cc0000] to-red-700 text-white border-b border-red-600">
+              <h2 className="font-bold text-base uppercase tracking-wide">Related News</h2>
+              <p className="text-xs text-red-100 mt-0.5">Top stories right now</p>
             </div>
-            <select 
-              value={activeLanguage} 
-              onChange={(e) => setActiveLanguage(e.target.value)} 
-              className="w-full p-2 text-sm border rounded focus:border-[#cc0000] bg-white outline-none"
-            >
-              {['English', 'Hindi', 'Tamil', 'Telugu', 'Bengali', 'Assamese'].map(lang => (
-                <option key={lang} value={lang}>
-                  {lang === 'English' ? 'Read in English' : `${lang} - Localized`}
-                </option>
+            <div className="divide-y divide-gray-100">
+              {relatedArticleList?.slice(0, 5).map((item, idx) => (
+                <button
+                  key={`${item.article_id}-${idx}`}
+                  onClick={() => handleRelatedClick(item.article_id)}
+                  className="w-full text-left px-5 py-4 hover:bg-red-50 transition-colors duration-200 group flex gap-4 items-start active:bg-red-100"
+                >
+                  <div className="flex-shrink-0 flex items-start">
+                    <span className="text-[32px] font-black text-red-200 leading-tight group-hover:text-[#cc0000] transition-colors">{idx + 1}</span>
+                  </div>
+                  <div className="flex-1 min-w-0 pt-1">
+                    <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#cc0000] transition-colors line-clamp-2 leading-tight">
+                      {item.title}
+                    </h3>
+                  </div>
+                </button>
               ))}
-            </select>
-            <p className="text-[10px] text-gray-500 mt-2 italic">AI translates intent and cultural context.</p>
+            </div>
           </div>
 
-          {/* More News Section - Below Vernacular */}
-          <div className="bg-white p-4 border border-gray-200 rounded">
-            <h2 className="font-bold text-sm uppercase text-gray-500 mb-4">More News</h2>
-            <div className="space-y-3">
+          {/* 5. More News - Rich Grid with Images and Details */}
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-gray-800 to-gray-900 text-white border-b border-gray-700">
+              <h2 className="font-bold text-base uppercase tracking-wide">More News</h2>
+            </div>
+            <div className="divide-y divide-gray-100 max-h-[550px] overflow-y-auto">
               {loadingFallback && relatedArticleList?.length < 3 ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 size={18} className="animate-spin text-[#cc0000]" />
-                  <span className="ml-2 text-xs text-gray-600">Loading articles...</span>
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <Loader2 size={24} className="animate-spin text-[#cc0000] mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">Loading articles...</p>
+                  </div>
                 </div>
               ) : relatedArticleList?.length > 2 ? (
                 relatedArticleList.slice(2).map((item, idx) => (
-                  <div 
+                  <button
                     key={`${item.article_id}-${idx}`}
                     onClick={() => handleRelatedClick(item.article_id)}
-                    className="flex gap-3 p-3 bg-gray-50 border border-gray-100 rounded cursor-pointer hover:bg-white hover:border-[#cc0000] transition-all group"
+                    className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-4 active:bg-gray-100"
                   >
                     {item.urlToImage && (
                       <img 
                         src={item.urlToImage} 
                         alt={item.title}
-                        className="w-16 h-16 object-cover rounded flex-shrink-0"
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow"
                       />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-xs mb-1 line-clamp-2 text-gray-900 group-hover:text-[#cc0000]">
-                        {item.title}
-                      </h3>
-                      {item.summary && (
-                        <p className="text-[11px] text-gray-600 line-clamp-1">
-                          {item.summary}
-                        </p>
-                      )}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#cc0000] transition-colors line-clamp-2 mb-1.5 leading-tight">
+                          {item.title}
+                        </h3>
+                        {item.summary && (
+                          <p className="text-[12px] text-gray-600 line-clamp-1">
+                            {item.summary}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </button>
                 ))
               ) : fallbackArticles?.length > 0 ? (
                 fallbackArticles.map((item, idx) => (
-                  <div 
+                  <button
                     key={`fallback-${item.article_id}-${idx}`}
                     onClick={() => handleRelatedClick(item.article_id)}
-                    className="flex gap-3 p-3 bg-gray-50 border border-gray-100 rounded cursor-pointer hover:bg-white hover:border-[#cc0000] transition-all group"
+                    className="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 group flex gap-4 active:bg-gray-100"
                   >
                     {item.urlToImage && (
                       <img 
                         src={item.urlToImage} 
                         alt={item.title}
-                        className="w-16 h-16 object-cover rounded flex-shrink-0"
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow"
                       />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-xs mb-1 line-clamp-2 text-gray-900 group-hover:text-[#cc0000]">
-                        {item.title}
-                      </h3>
-                      {item.summary && (
-                        <p className="text-[11px] text-gray-600 line-clamp-1">
-                          {item.summary}
-                        </p>
-                      )}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#cc0000] transition-colors line-clamp-2 mb-1.5 leading-tight">
+                          {item.title}
+                        </h3>
+                        {item.summary && (
+                          <p className="text-[12px] text-gray-600 line-clamp-1">
+                            {item.summary}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </button>
                 ))
               ) : (
-                <p className="text-xs text-gray-500 py-2">No articles available</p>
+                <p className="text-sm text-gray-500 py-8 px-5 text-center">No articles available</p>
               )}
             </div>
           </div>

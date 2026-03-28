@@ -13,6 +13,7 @@ const RightPanel = () => {
   const [loadingKeywords, setLoadingKeywords] = useState(false);
   const [keywordError, setKeywordError] = useState(null);
   const [expandedKeywords, setExpandedKeywords] = useState({});
+  const [showAllKeywords, setShowAllKeywords] = useState(false);
 
   // Featured & Slideshows state
   const [featuredArticles, setFeaturedArticles] = useState([]);
@@ -50,7 +51,11 @@ const RightPanel = () => {
         setLoadingKeywords(true);
         setKeywordError(null);
         const response = await axiosInstance.get('/api/keywords');
-        setAllKeywords(response.data?.keywords || []);
+        const keywords = response.data?.keywords || [];
+        
+        // Randomize keywords to avoid showing only health-related ones
+        const randomized = [...keywords].sort(() => Math.random() - 0.5);
+        setAllKeywords(randomized);
       } catch (err) {
         console.error('Error fetching keywords:', err);
         setKeywordError('Unable to load keywords');
@@ -180,25 +185,31 @@ const RightPanel = () => {
           </div>
         ) : allKeywords.length > 0 ? (
           <div className="space-y-2">
-            {allKeywords.slice(0, 10).map((keyword) => (
-              <div key={keyword.keyword_id} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            {allKeywords.slice(0, showAllKeywords ? 15 : 6).map((keyword, idx) => (
+              <div key={keyword.keyword_id} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 bg-white group">
                 {/* Keyword Header - Expandable */}
                 <button
                   onClick={() => toggleKeywordExpand(keyword.keyword_id)}
-                  className="w-full p-3 flex items-center justify-between bg-white hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white hover:from-gray-100 hover:to-gray-50 transition-all border-b border-gray-100"
                 >
                   <div className="flex items-center gap-3 flex-1 text-left">
-                    <div className="w-2 h-2 rounded-full bg-[#cc0000]"></div>
-                    <span className="font-semibold text-sm text-gray-900">
-                      {keyword.keyword_name}
-                    </span>
-                    <span className="text-gray-400 text-xs">
-                      {keyword.article_count} {keyword.article_count === 1 ? 'article' : 'articles'}
-                    </span>
+                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-bold ${
+                      idx % 5 === 0 ? 'bg-red-500' : idx % 5 === 1 ? 'bg-blue-500' : idx % 5 === 2 ? 'bg-green-500' : idx % 5 === 3 ? 'bg-purple-500' : 'bg-orange-500'
+                    }`}>
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-bold text-sm text-gray-900 line-clamp-1">
+                        {keyword.keyword_name}
+                      </span>
+                      <span className="text-gray-500 text-[11px] block">
+                        {keyword.article_count} {keyword.article_count === 1 ? 'article' : 'articles'}
+                      </span>
+                    </div>
                   </div>
                   <ChevronDown
-                    size={16}
-                    className={`text-gray-400 transition-transform flex-shrink-0 ${
+                    size={18}
+                    className={`text-gray-400 transition-transform flex-shrink-0 group-hover:text-[#cc0000] ${
                       expandedKeywords[keyword.keyword_id] ? 'transform rotate-180' : ''
                     }`}
                   />
@@ -206,13 +217,13 @@ const RightPanel = () => {
 
                 {/* Keyword Summaries - Expandable */}
                 {expandedKeywords[keyword.keyword_id] && (
-                  <div className="p-3 bg-gray-50 space-y-2 max-h-72 overflow-y-auto">
+                  <div className="p-3 bg-gray-50 space-y-2 max-h-72 overflow-y-auto border-t border-gray-100">
                     {keyword.summaries && keyword.summaries.length > 0 ? (
                       keyword.summaries.map((summary, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleSummaryClick(summary.article_id)}
-                          className="w-full text-left p-3 bg-white rounded border border-gray-200 hover:border-[#cc0000] hover:bg-red-50 transition-all hover:shadow-sm"
+                          className="w-full text-left p-3 bg-white rounded border border-gray-200 hover:border-[#cc0000] hover:bg-red-50 transition-all hover:shadow-sm group/item"
                         >
                           <p className="text-xs text-gray-700 leading-relaxed line-clamp-3 mb-2">
                             {summary.summary || 'No summary available'}
@@ -221,7 +232,7 @@ const RightPanel = () => {
                             <span className="text-[10px] text-gray-500">
                               {new Date(summary.created_at).toLocaleDateString()}
                             </span>
-                            <span className="text-[#cc0000] text-xs font-semibold flex items-center gap-1">
+                            <span className="text-[#cc0000] text-xs font-semibold flex items-center gap-1 group-hover/item:gap-2 transition-all">
                               Read <ExternalLink size={12} />
                             </span>
                           </div>
@@ -234,6 +245,16 @@ const RightPanel = () => {
                 )}
               </div>
             ))}
+            
+            {/* Show More / Show Less Button */}
+            {allKeywords.length > 6 && (
+              <button
+                onClick={() => setShowAllKeywords(!showAllKeywords)}
+                className="w-full mt-4 px-4 py-2 text-sm font-semibold text-[#cc0000] border border-[#cc0000] rounded-lg hover:bg-red-50 transition-colors"
+              >
+                {showAllKeywords ? '← Show Less' : 'Show More →'}
+              </button>
+            )}
           </div>
         ) : (
           <p className="text-xs text-gray-500 py-4">No keywords found.</p>

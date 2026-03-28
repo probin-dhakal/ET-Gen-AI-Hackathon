@@ -15,8 +15,10 @@ class TranslatedArticle(BaseModel):
     original_language: str = Field(description="Original language (English)")
     target_language: str = Field(description="Target language for translation")
     original_heading: str = Field(description="Original English heading")
+    original_nucleus_summary: str = Field(description="Original English nucleus summary")
     original_body: str = Field(description="Original English article body")
     translated_heading: str = Field(default="", description="Translated heading in target language")
+    translated_nucleus_summary: str = Field(default="", description="Translated nucleus summary in target language")
     translated_body: str = Field(default="", description="Translated body in target language with cultural context")
     local_context: str = Field(default="", description="Additional local context relevant to target region")
     translation_notes: Optional[str] = Field(default=None, description="Any important notes about cultural adaptations made")
@@ -76,7 +78,8 @@ class VernacularNewsTranslator:
         self,
         article_heading: str,
         article_body: str,
-        language: str
+        language: str,
+        nucleus_summary: str = None
     ) -> TranslatedArticle:
         """
         Translate a news article into specified Indian language with cultural adaptation.
@@ -85,6 +88,7 @@ class VernacularNewsTranslator:
         Args:
             article_heading: The original English article heading
             article_body: The original English article body/content
+            nucleus_summary: Optional English nucleus summary
             language: Target language (hindi, tamil, telugu, bengali, assamese)
         
         Returns:
@@ -97,10 +101,11 @@ class VernacularNewsTranslator:
         language_name = prompt_config["language_name"]
         
         # Construct translation request
+        summary_section = f"\nSUMMARY: {nucleus_summary}\n" if nucleus_summary else "\n"
+        
         translation_request = f"""{system_prompt}
 
-Please translate this news article into {language_name} with cultural adaptation:
-
+Please translate this news article into {language_name} with cultural adaptation:{summary_section}
 HEADING: {article_heading}
 
 BODY:
@@ -128,6 +133,8 @@ Remember to:
             # Guard against partial structured output from some providers.
             if not translated_article.translated_heading:
                 translated_article.translated_heading = article_heading
+            if not translated_article.translated_nucleus_summary:
+                translated_article.translated_nucleus_summary = nucleus_summary or ""
             if not translated_article.translated_body:
                 translated_article.translated_body = article_body
             
@@ -149,13 +156,16 @@ Remember to:
 
                 translated_heading = raw_text.splitlines()[0][:200] if raw_text else article_heading
                 translated_body = raw_text if raw_text else article_body
+                translated_summary = nucleus_summary or ""
 
                 return TranslatedArticle(
                     original_language="English",
                     target_language=language_name,
                     original_heading=article_heading,
+                    original_nucleus_summary=nucleus_summary or "",
                     original_body=article_body,
                     translated_heading=translated_heading,
+                    translated_nucleus_summary=translated_summary,
                     translated_body=translated_body,
                     local_context="",
                     translation_notes="Fallback translation used due to structured parsing failure."
@@ -197,11 +207,23 @@ if __name__ == "__main__":
     # Sample business news article
     sample_heading = "Union Budget 2026: Major Tax Reforms and Economic Push Announced"
     sample_body = """
-    The Finance Minister today announced a comprehensive budget with significant tax reforms aimed at boosting economic growth.
-    Key highlights include: personal income tax slab reduction of 2%, increased FDI limits in manufacturing at 35%, and a new Rs. 50,000 crore 
-    infrastructure fund. The market indices surged on the announcement, with Sensex gaining 1,200 points. Analysts predict this will attract 
-    multinational corporations and accelerate the Make in India initiative. The budget also focuses on digital payments and fintech startups, 
-    allocating Rs. 5,000 crore for innovation hubs across tier-2 cities.
+    Healthcare systems around the world are entering a structural transition period in which demand is rising faster than capacity, costs are growing faster than public budgets, and patient expectations are rising faster than institutional redesign. Policymakers, hospital leaders, insurers, and clinicians increasingly agree that incremental reform is no longer enough. The present phase requires a coordinated redesign of financing, workforce planning, digital infrastructure, and quality governance. In this context, healthcare workforce planning and retention has moved from a specialized policy topic to a central national priority across both developed and emerging economies. A key feature of the current period is demographic pressure. Populations are aging in most middle-income and high-income regions, and life expectancy gains have expanded the number of people living with chronic disease. Diabetes, hypertension, cardiovascular disease, cancer survivorship, chronic respiratory conditions, and neurodegenerative disorders require long-term management rather than episodic treatment. This shifts healthcare demand from one-time interventions toward continuous monitoring, multidisciplinary care plans, rehabilitation, and social support. Governments that budgeted around acute-care models now face multi-year care liabilities that challenge fiscal planning.
+
+Workforce constraints are equally severe. Health systems are struggling with shortages of nurses, primary care physicians, emergency specialists, technicians, and mental-health professionals. Training pipelines are too slow to fill near-term gaps, while migration of skilled personnel from lower-income regions to higher-income labor markets creates uneven capacity across countries.
+
+Burnout and attrition after years of high-intensity service have further reduced staffing resilience. The workforce issue is not only about headcount; it also concerns skill mix, scope-of-practice rules, team-based models, and better deployment of allied professionals who can safely absorb routine clinical tasks. Financial sustainability remains a major policy challenge. Healthcare inflation is driven by pharmaceuticals, diagnostics, specialist procedures, imported devices, insurance leakage, and fragmented procurement practices. Even where total spending is high, outcomes are often uneven because resources are concentrated in tertiary hospitals while preventive and primary systems remain underfunded.
+
+The policy debate increasingly centers on value-based purchasing, pooled procurement, bundled payments, and outcome-linked reimbursement. Decision makers are asking whether current spending produces measurable gains in survival, quality of life, and equity, or merely expands high-cost activity without proportional benefit.
+
+Digital transformation is creating both opportunities and execution risks. Electronic health records, telemedicine, e-prescription systems, remote monitoring, and AI-assisted triage can reduce waiting times, support continuity of care, and improve case prioritization. Yet digital adoption often suffers from low interoperability, poor data standards, and vendor lock-in. Rural and low-income patients may face connectivity barriers that turn digital channels into new forms of exclusion.
+
+Regulators are therefore moving toward standards for interoperability, privacy protections, auditability of clinical AI models, and shared governance frameworks that define accountability when algorithmic recommendations influence treatment choices. Public health preparedness has become a permanent planning function rather than a temporary emergency response layer. Health ministries are strengthening surveillance systems, laboratory networks, genomic sequencing, stockpiles, and surge-capacity protocols to respond to infectious disease outbreaks and climate-linked health shocks. Preparedness now includes logistics design: oxygen distribution, cold-chain reliability, mobile testing capability, and cross-border data exchange arrangements.
+
+Countries that invest in inter-operable emergency systems can reduce mortality not only during pandemics but also during seasonal spikes in respiratory disease, heat emergencies, and disaster-related displacement. Equity and access remain decisive indicators of system quality. In many regions, urban populations receive sophisticated care while peri-urban and rural communities face delayed diagnosis, medicine shortages, and workforce scarcity.
+
+Women, children, older adults, migrant workers, and low-income households often encounter higher out-of-pocket costs and lower service continuity. Health policy is increasingly tied to social protection architecture: transport support, insurance portability, community health worker programs, and localized primary care hubs.
+
+
     """
     
     # Translate to Assamese using LangChain structured agent
