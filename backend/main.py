@@ -465,6 +465,7 @@ def get_personalized_feed_articles(persona_id: str, limit: int = 6):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 @app.get("/api/personas")
 def list_all_personas():
     """Get list of all available personas."""
