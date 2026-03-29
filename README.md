@@ -43,7 +43,7 @@
 #### 1. Clone Repository
 
 ```bash
-[git clone https://github.com/economic-times/et-gen-ai-newsnav.git](https://github.com/probin-dhakal/ET-Gen-AI-Hackathon.git)
+https://github.com/probin-dhakal/ET-Gen-AI-Hackathon.git
 cd ET-Gen-AI-Hackathon
 ```
 
