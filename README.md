@@ -9,6 +9,8 @@
 
 ---
 
+(Detailed Doc Link)[https://drive.google.com/file/d/1FXWIGW_G9cwOZEqa8jhghqpED5L1AbPM/view?usp=sharing]
+
 ## Overview
 
 **ET Gen-AI NewsNavigator** is an advanced news platform that transforms how news is discovered and understood. Using AI agents, semantic search, and personalization, it delivers intelligent news experiences tailored to user roles and interests.
@@ -128,8 +130,6 @@ et-gen-ai-newsnav/
 │   │   └── index.js            
 │   └── server.js                    # Server entry
 │
-├── ARCHITECTURE.md               # Technical documentation
-├── README-PPT.md                 # Presentation brief
 └── README.md                     # This file
 ```
 
