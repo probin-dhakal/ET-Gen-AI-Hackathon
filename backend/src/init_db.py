@@ -40,11 +40,11 @@ def setup_database(db_path: str = "db/news_navigator.db"):
         return True
         
     except PermissionError:
-        print(f"❌ Permission denied: Cannot create directory {db_dir}")
+        print(f" Permission denied: Cannot create directory {db_dir}")
         print(f"   Try running with sudo or use a different path")
         return False
     except Exception as e:
-        print(f"❌ Error initializing database: {e}")
+        print(f" Error initializing database: {e}")
         return False
 
 

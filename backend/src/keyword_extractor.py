@@ -230,6 +230,6 @@ if __name__ == "__main__":
         article_body=sample_body
     )
     
-    print(f"✅ Nucleus Summary:\n{result.nucleus_summary}\n")
-    print(f"📌 Keywords: {result.keywords}\n")
-    print(f"📊 Confidence: {result.confidence_score}\n")
+    print(f" Nucleus Summary:\n{result.nucleus_summary}\n")
+    print(f" Keywords: {result.keywords}\n")
+    print(f" Confidence: {result.confidence_score}\n")

@@ -21,7 +21,7 @@ VECTOR_INDEXING_ENABLED = os.getenv("ENABLE_VECTOR_INDEXING", "false").lower() =
 db = DatabaseManager()
 
 # ==============================
-# 👤 USER PERSONAS FOR PERSONALIZATION
+# USER PERSONAS FOR PERSONALIZATION
 # ==============================
 PERSONAS = {
     "startup_founder": {
@@ -74,7 +74,7 @@ PERSONAS = {
     }
 }
 
-# ✅ CORS (important for React)
+# CORS (important for React)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -84,7 +84,7 @@ app.add_middleware(
 )
 
 # ==============================
-# 📦 Request Models
+# Request Models
 # ==============================
 
 class TranslationRequest(BaseModel):
@@ -126,10 +126,10 @@ class BriefingRequest(BaseModel):
 
 
 
-# ✅ Serve audio folder
+# Serve audio folder
 app.mount("/audio", StaticFiles(directory="audio"), name="audio")
 # ==============================
-# 🏠 Root Route
+# Root Route
 # ==============================
 
 @app.get("/")
@@ -586,7 +586,7 @@ def generate_video(request_data: VideoRequest):
     try:
         generator = NewsVideoGenerator()
 
-        # ✅ safe handling
+        # safe handling
         language = (request_data.language or "english").lower()
 
         print(request_data)
@@ -604,7 +604,7 @@ def generate_video(request_data: VideoRequest):
 
     except Exception as e:
         import traceback
-        traceback.print_exc()  # 🔥 helps debugging
+        traceback.print_exc()  # helps debugging
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1064,7 +1064,7 @@ Rules:
     except HTTPException as http_e:
         raise http_e
     except Exception as e:
-        print(f"❌ Error generating briefing: {str(e)}")
+        print(f"Error generating briefing: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Briefing generation failed: {str(e)}")
     
 
@@ -1179,7 +1179,7 @@ def generate_story_intelligence(article_id: int, query: Optional[str] = None):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error generating story intelligence: {str(e)}")
+        print(f"Error generating story intelligence: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Story intelligence generation failed: {str(e)}")
     
 
@@ -1237,18 +1237,18 @@ STEP 1: VALIDATE THE QUESTION
 First, determine if the question is meaningful and relevant to the article:
 
 REJECT with a redirect if the question is:
-✗ Casual greetings ("hello", "how are you", "hi there", etc.)
-✗ Off-topic small talk unrelated to business/finance
-✗ Completely incoherent or spam
-✗ Just asking you to acknowledge presence
+- Casual greetings ("hello", "how are you", "hi there", etc.)
+- Off-topic small talk unrelated to business/finance
+- Completely incoherent or spam
+- Just asking you to acknowledge presence
 
 Valid questions generally fit these patterns:
-✓ Impact questions: "How will this impact my portfolio/investments/business?"
-✓ Analysis: "What are the business implications?" "What are the risks?"
-✓ Predictions: "What should investors watch for?" "What happens next?"
-✓ Details: "Who are the key players?" "What are the numbers?"
-✓ Connections: "How does this affect [industry/market]?"
-✓ Opportunity: "What opportunities does this create?"
++ Impact questions: "How will this impact my portfolio/investments/business?"
++ Analysis: "What are the business implications?" "What are the risks?"
++ Predictions: "What should investors watch for?" "What happens next?"
++ Details: "Who are the key players?" "What are the numbers?"
++ Connections: "How does this affect [industry/market]?"
++ Opportunity: "What opportunities does this create?"
 
 ---
 
@@ -1306,7 +1306,7 @@ Now process the user's question above following these steps."""
         }
     
     except Exception as e:
-        print(f"❌ Error answering article question: {str(e)}")
+        print(f"Error answering article question: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate answer: {str(e)}"

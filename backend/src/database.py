@@ -978,7 +978,7 @@ if __name__ == "__main__":
     # Test the database
     db = DatabaseManager()
     
-    print("📊 Adding test article...")
+    print(" Adding test article...")
     article_id = db.insert_article(
         heading="Union Budget 2026: Tax relief for middle class",
         body="In a major fiscal stimulus, the government announced significant tax relief targeting the middle class...",
@@ -991,9 +991,9 @@ if __name__ == "__main__":
         word_count=450,
         published_at="2026-03-22 10:30:00"
     )
-    print(f"✅ Article ID: {article_id}\n")
+    print(f" Article ID: {article_id}\n")
     
-    print("🌐 Adding translations...")
+    print(" Adding translations...")
     languages = ["hindi", "tamil", "telugu"]
     for lang in languages:
         translation_id = db.insert_translation(
@@ -1004,16 +1004,16 @@ if __name__ == "__main__":
             local_context=f"Context relevant to {lang} speakers",
             translator_model="azure-openai-gpt4"
         )
-        print(f"  ✅ {lang.capitalize()} translation (ID: {translation_id})")
+        print(f"  {lang.capitalize()} translation (ID: {translation_id})")
     
-    print("\n📋 Getting translation status...")
+    print("\n Getting translation status...")
     status = db.get_translation_status(article_id)
     print(f"  Total translations: {status['total_translations']}")
     print(f"  Languages: {', '.join(status['languages'])}")
     
-    print("\n✅ Database schema with articles and translations ready!")
+    print("\n Database schema with articles and translations ready!")
 
-    print("🏷️ Adding keywords...")
+    print("Adding keywords...")
     keyword_ids = []
     for keyword in ["Union Budget 2026", "Tax Relief", "Fiscal Policy"]:
         kw_id = db.insert_or_get_keyword(keyword)
@@ -1021,12 +1021,12 @@ if __name__ == "__main__":
         keyword_ids.append(kw_id)
         print(f"  - {keyword} (ID: {kw_id})")
     
-    print("\n📈 Trending keywords...")
+    print("\n Trending keywords...")
     trending = db.get_trending_keywords(5)
     for kw in trending:
         print(f"  - {kw['name']}: {kw['article_count']} articles")
     
-    print("\n📋 Timeline for 'Union Budget 2026'...")
+    print("\n Timeline for 'Union Budget 2026'...")
     timeline = db.get_keyword_timeline("Union Budget 2026", days_back=30)
     for entry in timeline:
         print(f"  - {entry['date']}: {entry['mention_count']} mentions")

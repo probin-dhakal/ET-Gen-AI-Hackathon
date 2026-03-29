@@ -6,7 +6,7 @@ import requests
 from typing import List
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from langchain_openai import AzureChatOpenAI # Updated import
+from langchain_openai import AzureChatOpenAI 
 
 load_dotenv()
 
@@ -104,7 +104,7 @@ class NewsVideoGenerator:
             return [Scene(text="Latest Updates", highlight="NEWS", image_prompt="Professional news studio background") for _ in range(5)]
 
     # ==============================
-    # 🎙️ NARRATION
+    # NARRATION
     # ==============================
 
     def generate_narration(self, article, language):
@@ -135,7 +135,7 @@ class NewsVideoGenerator:
         return result.content.strip()
 
     # ==============================
-    # 🎨 IMAGE GENERATION
+    # IMAGE GENERATION
     # ==============================
 
     def generate_image(self, prompt, index):
@@ -163,7 +163,7 @@ class NewsVideoGenerator:
             return "fallback.jpg"
 
     # ==============================
-    # 🎧 AUDIO (AZURE TTS)
+    # AUDIO (AZURE TTS)
     # ==============================
 
     def select_voice(self, article, language):
@@ -195,7 +195,7 @@ class NewsVideoGenerator:
         return "audio.mp3", self.get_audio_duration(path)
 
     # ==============================
-    # 🎬 MAIN EXECUTION
+    # MAIN EXECUTION
     # ==============================
 
     def generate_video(self, article, title, language="english"):

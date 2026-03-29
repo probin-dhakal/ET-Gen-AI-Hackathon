@@ -123,7 +123,7 @@ class VectorStore:
             return faiss_index
             
         except Exception as e:
-            print(f"⚠️ Warning: Could not create embedding: {e}")
+            print(f" Warning: Could not create embedding: {e}")
             print(f"  Creating fallback mapping...")
             # Fallback: create mapping without embedding
             faiss_index = article_id
@@ -232,7 +232,7 @@ if __name__ == "__main__":
         store = VectorStore()
         
         # Add sample articles
-        print("📝 Adding articles to vector store...")
+        print("Adding articles to vector store...")
         summaries = [
             "Union Budget 2026 announces 5% tax relief for middle class.",
             "RBI raises repo rate by 50 basis points amid inflation.",
@@ -241,9 +241,9 @@ if __name__ == "__main__":
         
         for idx, summary in enumerate(summaries, 1):
             faiss_idx = store.add_article(idx, summary)
-            print(f"  ✅ Article {idx} -> FAISS Index {faiss_idx}")
+            print(f"  Article {idx} -> FAISS Index {faiss_idx}")
         
-        print(f"\n📊 Store Stats: {store.get_stats()}\n")
+        print(f"\n Store Stats: {store.get_stats()}\n")
         
         # Test semantic search
         print("🔎 Semantic Search 'budget tax policy':")
@@ -252,4 +252,4 @@ if __name__ == "__main__":
             print(f"  - Article {article_id} (distance: {distance:.4f})")
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")

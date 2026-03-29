@@ -1,2 +1,8 @@
 .env
 .venv
+backend/test_files
+venv
+backend/__pycache__/
+test_files
+ARCHITECTURE.md
+README-PPT.md
