@@ -330,19 +330,18 @@ Each persona receives personalized 3-5 stories/day instead of generic 50-article
 
 ### Tech Stack
 
-- **Frontend**: React 19, React Router, Zustand, Tailwind CSS
-- **Backend**: FastAPI (Python), PostgreSQL, FAISS vector DB
-- **AI/ML**: Google GenAI (Gemini 1.5), LangChain, LangGraph
+- **Frontend**: React, React Router, Zustand, Tailwind CSS
+- **Backend**: FastAPI (Python), SQLite, FAISS vector DB
+- **AI/ML**: GPT-5.4-Nano, LangChain, LangGraph
 - **Services**: Remotion.js (video), Pexels API (images)
-- **Deployment**: Docker, Cloud Run compatible
+
 
 ### Performance
 
 - **Search Latency**: <200ms (semantic) vs 500ms (traditional)
 - **API Response**: <500ms for personalized feeds
 - **Video Generation**: 45-60 seconds per article
-- **Concurrent Capacity**: 10K+ users with current stack
-- **Uptime Target**: 99.5%
+
 
 ### Resilience Features
 
