@@ -125,7 +125,7 @@ et-gen-ai-newsnav/
 │
 ├── remotion-server/              # Video generation service
 │   ├── src/
-|    |--|-- Root.js
+|   |   ├── Root.js
 │   │   ├── Video.js              # Remotion composition
 │   │   └── index.js            
 │   └── server.js                    # Server entry
