@@ -3,7 +3,6 @@
 > **AI-Powered Personalized News Intelligence Platform**  
 > Making news discovery intelligent, multi-lingual, and insightful.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![React 19+](https://img.shields.io/badge/React-19%2B-61DAFB?logo=react)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128%2B-009688)](https://fastapi.tiangolo.com/)
