@@ -326,7 +326,7 @@ Each persona receives personalized 3-5 stories/day instead of generic 50-article
 
 ---
 
-## 🏗️ Architecture Highlights
+## Architecture Highlights
 
 ### Tech Stack
 
@@ -357,7 +357,7 @@ Each persona receives personalized 3-5 stories/day instead of generic 50-article
 
 
 
-## 📊 Project Stats
+## Project Stats
 
 ![Lines of Code](https://img.shields.io/badge/Lines%20of%20Code-50K%2B-blue)
 ![Files](https://img.shields.io/badge/Files-200%2B-blue)
@@ -370,7 +370,5 @@ Each persona receives personalized 3-5 stories/day instead of generic 50-article
 <div align="center">
 
 **Made with ❤️ by the Neural Ninjas**
-
-[Issues](https://github.com/economic-times/et-gen-ai-newsnav/issues) • [Discussions](https://github.com/economic-times/et-gen-ai-newsnav/discussions)
 
 </div>
