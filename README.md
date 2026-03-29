@@ -237,79 +237,8 @@ For detailed agent behavior, workflows, and error handling, see [ARCHITECTURE.md
 
 ---
 
-## API Endpoints
 
-### Core Endpoints
 
-#### Articles
-
-```bash
-# Get latest articles
-GET /api/articles/latest?limit=50&offset=0
-
-# Get article details
-GET /api/articles/{article_id}
-
-# Get personalized feed (by persona)
-GET /api/feed/personalized/{persona_id}
-# Personas: startup_founder, retail_investor, enterprise_executive, policy_maker
-
-# Advanced search with AI ranking
-POST /api/search
-{
-  "query": "Your question",
-  "persona_id": "startup_founder",
-  "limit": 10
-}
-```
-
-#### Personalization
-
-```bash
-# Get all personas
-GET /api/personas
-
-# Get trending keywords
-GET /api/keywords/trending
-
-# Articles by category
-GET /api/articles/category/{category}
-# Categories: world, business, technology, healthcare, india, education, environment
-```
-
-#### Translation
-
-```bash
-# Get translated article
-GET /api/translations/{article_id}/{language}
-# Languages: English, Hindi, Tamil, Telugu, Bengali, Assamese
-```
-
-#### Video & Insights
-
-```bash
-# Generate video summary
-POST /generate-video
-{
-  "article_text": "Article content",
-  "language": "English"
-}
-
-# Story arc analysis
-GET /api/story-arc/{article_id}
-
-# Deeper dive Q&A
-POST /api/search
-{
-  "article_id": "123",
-  "question": "What are the risks?",
-  "context_type": "q_and_a"
-}
-```
-
-For complete API documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md#api-endpoints).
-
----
 
 ## User Personas
 
