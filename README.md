@@ -316,21 +316,6 @@ Enables context-aware transcreation, not just translation.
 
 
 
-## User Personas
-
-The platform supports 4 distinct user personas with tailored content:
-
-| Persona                  | Role                | Interests                          | Goal                                |
-| ------------------------ | ------------------- | ---------------------------------- | ----------------------------------- |
-| **Startup Founder**      | Tech Entrepreneur   | VC, SaaS, Competitors, Funding     | Secure funding & monitor runway     |
-| **Retail Investor**      | Individual Investor | Stocks, Dividends, Policy, Trends  | Grow portfolio safely (10Y horizon) |
-| **Enterprise Executive** | Corporate Leader    | Digital transformation, Cloud, B2B | Drive competitive advantage         |
-| **Policy Maker**         | Government Official | Economic policy, FDI, Employment   | Assess policy effectiveness         |
-
-Each persona receives personalized 3-5 stories/day instead of generic 50-article feeds.
-
----
-
 ## Architecture Highlights
 
 ### Tech Stack
