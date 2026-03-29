@@ -9,7 +9,7 @@
 
 ---
 
-(Detailed Doc Link)[https://drive.google.com/file/d/1FXWIGW_G9cwOZEqa8jhghqpED5L1AbPM/view?usp=sharing]
+**[Detailed Doc Link](https://drive.google.com/file/d/1FXWIGW_G9cwOZEqa8jhghqpED5L1AbPM/view?usp=sharing)**
 
 ## Overview
 
