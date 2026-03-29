@@ -10,7 +10,7 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
 **ET Gen-AI NewsNavigator** is an advanced news platform that transforms how news is discovered and understood. Using AI agents, semantic search, and personalization, it delivers intelligent news experiences tailored to user roles and interests.
 
@@ -36,7 +36,7 @@
 - Node.js 18+
 - PostgreSQL 14+
 - Azure OpenAI API key (for gpt-5.4-nano model)
-- Pexels API key (optional, for images)
+- Pexels API key 
 
 ### Installation
 
@@ -92,12 +92,6 @@ npm run dev
 
 ---
 
-## 📚 Documentation
-
-### Architecture & Design
-
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed system design, agent roles, tool integrations, error handling
-- **[README-PPT.md](./README-PPT.md)** - Presentation brief with business impact metrics
 
 ### Project Structure
 
@@ -359,14 +353,6 @@ Each persona receives personalized 3-5 stories/day instead of generic 50-article
 - Database connection pooling
 - Comprehensive health checks
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md#error-handling--resilience) for error handling strategies.
-
----
-
-
-## 📄 License
-
-This project is licensed under the MIT License - see [LICENSE](./LICENSE) file for details.
 
 ---
 
@@ -386,6 +372,6 @@ This project is licensed under the MIT License - see [LICENSE](./LICENSE) file f
 
 **Made with ❤️ by the Neural Ninjas**
 
-[Documentation](./ARCHITECTURE.md) • [Presentation](./README-PPT.md) • [Issues](https://github.com/economic-times/et-gen-ai-newsnav/issues) • [Discussions](https://github.com/economic-times/et-gen-ai-newsnav/discussions)
+[Issues](https://github.com/economic-times/et-gen-ai-newsnav/issues) • [Discussions](https://github.com/economic-times/et-gen-ai-newsnav/discussions)
 
 </div>
