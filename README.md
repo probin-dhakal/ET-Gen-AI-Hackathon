@@ -224,8 +224,6 @@ The system uses a 4-tier agent orchestration layer:
 3. **Intelligence Agent** - Analysis and insights
 4. **Response Generator** - Formatting and delivery
 
-For detailed agent behavior, workflows, and error handling, see [ARCHITECTURE.md](./ARCHITECTURE.md#agent-roles--responsibilities).
-
 ### Supported Tools
 
 - **Semantic Search** - Vector embeddings via FAISS
@@ -270,17 +268,6 @@ Each persona receives personalized 3-5 stories/day instead of generic 50-article
 - **Search Latency**: <200ms (semantic) vs 500ms (traditional)
 - **API Response**: <500ms for personalized feeds
 - **Video Generation**: 45-60 seconds per article
-
-
-### Resilience Features
-
-- Circuit breaker pattern for external APIs
-- Exponential backoff with retries
-- Vector search fallback to keyword search
-- Response caching (1-hour TTL)
-- Database connection pooling
-- Comprehensive health checks
-
 
 ---
 
